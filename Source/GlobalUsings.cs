@@ -1,0 +1,11 @@
+global using System.Net;
+global using System.Net.Http.Json;
+global using System.Globalization;
+global using System.Text;
+global using System.Text.Json;
+global using System.Text.Json.Serialization;
+global using DSharpPlus;
+global using DSharpPlus.Entities;
+global using DSharpPlus.EventArgs;
+global using DSharpPlus.Exceptions;
+global using DSharpPlus.SlashCommands;

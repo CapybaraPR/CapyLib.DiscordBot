@@ -1,0 +1,16 @@
+[Unit]
+Description=CapyLib Discord Bot Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/capy-discord-bot
+ExecStart=/usr/bin/dotnet /opt/capy-discord-bot/CapyLib.DiscordBot.dll
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+SyslogIdentifier=capy-discord-bot
+
+[Install]
+WantedBy=multi-user.target

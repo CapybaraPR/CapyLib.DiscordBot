@@ -1,0 +1,14 @@
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.db
+*.log
+bot-config.json
+bot-state.json
+aspect_bridge.key
+*.key
+.DS_Store
+Thumbs.db

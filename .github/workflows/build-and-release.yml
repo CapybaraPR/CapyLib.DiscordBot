@@ -1,0 +1,62 @@
+name: Build and Release CapyLib.DiscordBot
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore NuGet Packages
+        run: dotnet restore CapyLib.DiscordBot.csproj
+
+      - name: Build and Publish Self-Contained Linux & Windows
+        run: |
+          dotnet publish CapyLib.DiscordBot.csproj -c Release -f net8.0 -r linux-x64 --self-contained true -o ./publish/linux-x64
+          dotnet publish CapyLib.DiscordBot.csproj -c Release -f net8.0 -r win-x64 --self-contained true -o ./publish/win-x64
+          dotnet publish CapyLib.DiscordBot.csproj -c Release -f net8.0 --no-self-contained -o ./publish/framework-dependent
+
+      - name: Package Release Archives
+        run: |
+          cd ./publish/linux-x64 && zip -r ../../CapyLib.DiscordBot-linux-x64.zip . && cd ../..
+          cd ./publish/win-x64 && zip -r ../../CapyLib.DiscordBot-win-x64.zip . && cd ../..
+          cd ./publish/framework-dependent && zip -r ../../CapyLib.DiscordBot-net8.0.zip . && cd ../..
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CapyLib.DiscordBot-Builds
+          path: |
+            CapyLib.DiscordBot-linux-x64.zip
+            CapyLib.DiscordBot-win-x64.zip
+            CapyLib.DiscordBot-net8.0.zip
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            CapyLib.DiscordBot-linux-x64.zip
+            CapyLib.DiscordBot-win-x64.zip
+            CapyLib.DiscordBot-net8.0.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

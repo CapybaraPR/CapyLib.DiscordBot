@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>CapyLib.DiscordBot</AssemblyName>
+    <RootNamespace>AspectDiscordBot</RootNamespace>
+    <Authors>CapybaraPR</Authors>
+    <Company>CapybaraPR</Company>
+    <Product>CapyLib Discord Bot</Product>
+    <Version>1.2.0</Version>
+    <Description>Multi-server Discord Bot for SCP:SL EXILED CapyLib Bridge with SSH RSA Signature Authentication</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="bot-config.example.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Reference Include="DSharpPlus">
+      <HintPath>lib\DSharpPlus.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="DSharpPlus.SlashCommands">
+      <HintPath>lib\DSharpPlus.SlashCommands.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>lib\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

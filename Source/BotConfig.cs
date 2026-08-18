@@ -466,3 +466,66 @@ internal sealed class GroupAutocompleteProvider : IAutocompleteProvider
         return choices;
     }
 }
+
+internal sealed class OnlinePlayerAutocompleteProvider : IAutocompleteProvider
+{
+    public async Task<IEnumerable<DiscordAutoCompleteChoice>> Provider(AutocompleteContext ctx)
+    {
+        BotRuntime runtime = BotRuntime.Current;
+        var choices = new List<DiscordAutoCompleteChoice>();
+
+        string? serverId = ctx.Options.FirstOrDefault(o => o.Name == "server")?.Value?.ToString();
+        var serversToQuery = new List<ServerRuntime>();
+
+        if (!string.IsNullOrWhiteSpace(serverId) && runtime.TryGetServer(serverId, out ServerRuntime? server) && server != null)
+        {
+            serversToQuery.Add(server);
+        }
+        else
+        {
+            serversToQuery.AddRange(runtime.Servers);
+        }
+
+        var players = new List<ApiPlayer>();
+        foreach (ServerRuntime s in serversToQuery)
+        {
+            try
+            {
+                PlayersResponse resp = await s.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
+                if (resp.Players != null)
+                {
+                    foreach (ApiPlayer p in resp.Players)
+                        players.Add(p);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        string focusedValue = (ctx.FocusedOption?.Value?.ToString() ?? string.Empty).Trim();
+
+        IEnumerable<ApiPlayer> filtered = players;
+        if (!string.IsNullOrWhiteSpace(focusedValue))
+        {
+            filtered = filtered.Where(p =>
+                p.Id.ToString().Contains(focusedValue, StringComparison.OrdinalIgnoreCase) ||
+                (!string.IsNullOrEmpty(p.DisplayName) && p.DisplayName.Contains(focusedValue, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(p.UserId) && p.UserId.Contains(focusedValue, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        foreach (ApiPlayer p in filtered.Take(25))
+        {
+            string rankTag = p.HasRank ? $" [{p.DisplayRank}]" : "";
+            string label = DiscordPresentation.Limit($"#{p.Id}{rankTag} {p.DisplayName} — {p.Role}", 95);
+            choices.Add(new DiscordAutoCompleteChoice(label, p.Id.ToString()));
+        }
+
+        if (choices.Count == 0 && players.Count == 0)
+        {
+            choices.Add(new DiscordAutoCompleteChoice("На сервере нет игроков онлайн", "0"));
+        }
+
+        return choices;
+    }
+}

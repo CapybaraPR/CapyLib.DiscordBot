@@ -168,7 +168,8 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         [Option("server", "Выберите NR или MRP.")]
         [Choice("NR", "nr")]
         [Choice("MRP", "mrp")] string serverId,
-        [Option("player", "PlayerId, SteamID64 или ник игрока.")] string player,
+        [Option("player", "Выберите игрока онлайн или укажите PlayerId/SteamID.")]
+        [Autocomplete(typeof(OnlinePlayerAutocompleteProvider))] string player,
         [Option("duration", "Длительность бана (например: 1d, 30m, 2w, 0 = навсегда).")] string duration,
         [Option("reason", "Причина бана.")] string reason)
     {
@@ -198,7 +199,8 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         [Option("server", "Выберите NR или MRP.")]
         [Choice("NR", "nr")]
         [Choice("MRP", "mrp")] string serverId,
-        [Option("player", "PlayerId, SteamID64 или ник игрока.")] string player,
+        [Option("player", "Выберите игрока онлайн или укажите PlayerId/SteamID.")]
+        [Autocomplete(typeof(OnlinePlayerAutocompleteProvider))] string player,
         [Option("reason", "Причина кика.")] string reason)
     {
         BotRuntime runtime = BotRuntime.Current;
@@ -220,14 +222,15 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         await ExecuteServerCommandAsync(context, server, fullCommand, access, "Кик игрока").ConfigureAwait(false);
     }
 
-    [SlashCommand("setgroup", "Установить или снять группу игрока через pm setgroup.")]
+    [SlashCommand("setgroup", "Установить или снять группу игрока через setgroup.")]
     [SlashCommandPermissions(Permissions.Administrator)]
     public async Task SetGroupAsync(
         InteractionContext context,
         [Option("server", "Выберите NR или MRP.")]
         [Choice("NR", "nr")]
         [Choice("MRP", "mrp")] string serverId,
-        [Option("player", "PlayerId, SteamID64 или UserID игрока.")] string player,
+        [Option("player", "Выберите игрока онлайн или укажите PlayerId.")]
+        [Autocomplete(typeof(OnlinePlayerAutocompleteProvider))] string player,
         [Option("group", "Начните вводить для поиска группы или выберите из списка.")]
         [Autocomplete(typeof(GroupAutocompleteProvider))] string group)
     {
@@ -243,7 +246,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             await context.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
                 $"Недостаточно прав для {server.Config.DisplayName}. Выдача групп не разрешена вашей роли."))
                 .ConfigureAwait(false);
-            await SendAuditAsync(context, server.Config, $"pm setgroup {player} {group}", access, false, "Недостаточно прав для команды setgroup.")
+            await SendAuditAsync(context, server.Config, $"setgroup {player} {group}", access, false, "Недостаточно прав для команды setgroup.")
                 .ConfigureAwait(false);
             return;
         }
@@ -252,7 +255,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             ? "none"
             : group;
 
-        string fullCommand = $"pm setgroup {player} {targetGroup}";
+        string fullCommand = $"setgroup {player} {targetGroup}";
         string actionTitle = targetGroup == "none" ? "Снятие группы игрока" : $"Установка группы ({targetGroup})";
         await ExecuteServerCommandAsync(context, server, fullCommand, access, actionTitle).ConfigureAwait(false);
     }

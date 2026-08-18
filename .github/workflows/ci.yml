@@ -1,0 +1,36 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Verify Bot
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore CapyLib.DiscordBot.csproj
+
+      - name: Build Debug (.NET 8.0 & .NET 10.0)
+        run: dotnet build CapyLib.DiscordBot.csproj -c Debug --no-restore
+
+      - name: Build Release (.NET 8.0 & .NET 10.0)
+        run: dotnet build CapyLib.DiscordBot.csproj -c Release --no-restore

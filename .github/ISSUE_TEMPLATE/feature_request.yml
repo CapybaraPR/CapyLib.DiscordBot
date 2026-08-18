@@ -1,0 +1,13 @@
+name: 💡 Предложение новой функции (Feature Request)
+description: Предложить новую функцию для Discord-бота
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: Описание идеи
+      description: Какую команду или функцию вы хотите добавить в бота?
+      placeholder: Описание новой команды или логики...
+    validations:
+      required: true

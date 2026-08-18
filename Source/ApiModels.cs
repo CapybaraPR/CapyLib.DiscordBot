@@ -69,16 +69,25 @@ internal sealed class NestedServerStatus
 internal sealed class PlayersResponse
 {
     [JsonPropertyName("success")]
-    public bool Success { get; set; }
+    public bool Success { get; set; } = true;
 
     [JsonPropertyName("online")]
     public int Online { get; set; }
 
+    [JsonPropertyName("count")]
+    public int Count { get; set; }
+
     [JsonPropertyName("maximum")]
     public int Maximum { get; set; }
 
+    [JsonPropertyName("max_players")]
+    public int MaxPlayers { get; set; }
+
     [JsonPropertyName("players")]
     public List<ApiPlayer> Players { get; set; } = new();
+
+    public int GetOnline() => Online > 0 ? Online : (Count > 0 ? Count : Players.Count);
+    public int GetMaximum() => Maximum > 0 ? Maximum : (MaxPlayers > 0 ? MaxPlayers : 20);
 }
 
 internal sealed class GroupsResponse
@@ -98,11 +107,16 @@ internal sealed class ApiPlayer
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
+    [JsonPropertyName("nickname")]
+    public string? Nickname { get; set; }
+
     [JsonPropertyName("role")]
     public string Role { get; set; } = string.Empty;
 
     [JsonPropertyName("user_id")]
     public string? UserId { get; set; }
+
+    public string DisplayName => !string.IsNullOrWhiteSpace(Name) ? Name : (!string.IsNullOrWhiteSpace(Nickname) ? Nickname : "Unknown");
 }
 
 internal sealed class CommandRequest

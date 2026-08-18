@@ -51,9 +51,11 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         try
         {
             PlayersResponse response = await server.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
+            int online = response.GetOnline();
+            int maximum = response.GetMaximum();
             string players = BuildPlayerList(response, runtime.Config.ShowPlayerNames);
             DiscordEmbed embed = new DiscordEmbedBuilder()
-                .WithTitle($"{server.Config.DisplayName} | игроки: {response.Online}/{response.Maximum}")
+                .WithTitle($"{server.Config.DisplayName} | игроки: {online}/{maximum}")
                 .WithDescription(players)
                 .WithColor(new DiscordColor(52, 152, 219))
                 .WithTimestamp(DateTimeOffset.UtcNow)
@@ -374,7 +376,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         int shown = 0;
         foreach (ApiPlayer player in response.Players)
         {
-            string name = showNames ? DiscordPresentation.Limit(player.Name, 80) : "имя скрыто";
+            string name = showNames ? DiscordPresentation.Limit(player.DisplayName, 80) : "имя скрыто";
             string line = $"`#{player.Id}` {name} - `{player.Role}`\n";
             if (builder.Length + line.Length > 3800)
                 break;

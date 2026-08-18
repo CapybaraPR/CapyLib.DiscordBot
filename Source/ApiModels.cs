@@ -116,7 +116,18 @@ internal sealed class ApiPlayer
     [JsonPropertyName("user_id")]
     public string? UserId { get; set; }
 
+    [JsonPropertyName("group")]
+    public string? Group { get; set; }
+
+    [JsonPropertyName("rank")]
+    public string? Rank { get; set; }
+
+    [JsonPropertyName("rank_color")]
+    public string? RankColor { get; set; }
+
     public string DisplayName => !string.IsNullOrWhiteSpace(Name) ? Name : (!string.IsNullOrWhiteSpace(Nickname) ? Nickname : "Unknown");
+    public string DisplayRank => !string.IsNullOrWhiteSpace(Rank) ? Rank : (!string.IsNullOrWhiteSpace(Group) ? Group : string.Empty);
+    public bool HasRank => !string.IsNullOrWhiteSpace(DisplayRank) && !DisplayRank.Equals("none", StringComparison.OrdinalIgnoreCase);
 }
 
 internal sealed class CommandRequest

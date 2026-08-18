@@ -57,6 +57,9 @@ internal sealed class BotConfig
     [JsonPropertyName("ra_role_ids")]
     public List<ulong> RaRoleIds { get; set; } = new();
 
+    [JsonPropertyName("management_role_ids")]
+    public List<ulong> ManagementRoleIds { get; set; } = new();
+
     [JsonPropertyName("creator_key_role_ids")]
     public List<ulong> CreatorKeyRoleIds { get; set; } = new();
 
@@ -142,6 +145,7 @@ internal sealed class BotConfig
         StatusMessageId = StatusMessageId,
         AuditChannelId = AuditChannelId,
         RaRoleIds = (RaRoleIds ?? new List<ulong>()).ToList(),
+        ManagementRoleIds = (ManagementRoleIds ?? new List<ulong>()).ToList(),
         CreatorKeyRoleIds = (CreatorKeyRoleIds ?? new List<ulong>()).ToList(),
         LogChannels = LogChannels ?? new LogChannelsConfig()
     };
@@ -191,6 +195,9 @@ internal sealed class ServerConfig
     [JsonPropertyName("ra_role_ids")]
     public List<ulong> RaRoleIds { get; set; } = new();
 
+    [JsonPropertyName("management_role_ids")]
+    public List<ulong> ManagementRoleIds { get; set; } = new();
+
     [JsonPropertyName("creator_key_role_ids")]
     public List<ulong> CreatorKeyRoleIds { get; set; } = new();
 
@@ -229,6 +236,7 @@ internal sealed class ServerConfig
         PublicAddress = (PublicAddress ?? string.Empty).Trim();
         RequiredServerRoleIds = NormalizeIds(RequiredServerRoleIds);
         RaRoleIds = NormalizeIds(RaRoleIds);
+        ManagementRoleIds = NormalizeIds(ManagementRoleIds);
         CreatorKeyRoleIds = NormalizeIds(CreatorKeyRoleIds);
         if (RaRoleIds.Count == 0)
             errors.Add($"{scope}.ra_role_ids не содержит ни одной общей административной роли");

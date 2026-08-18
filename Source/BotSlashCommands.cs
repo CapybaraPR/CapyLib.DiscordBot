@@ -68,6 +68,72 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         }
     }
 
+    [SlashCommand("listranked", "Показать список игроков с рангами на сервере (Руководство).")]
+    public async Task ListRankedAsync(
+        InteractionContext context,
+        [Option("server", "Выберите NR или MRP.")]
+        [Choice("NR", "nr")]
+        [Choice("MRP", "mrp")] string serverId)
+    {
+        BotRuntime runtime = BotRuntime.Current;
+        await DeferAsync(context, runtime.Config.EphemeralCommandResponses).ConfigureAwait(false);
+        ServerRuntime? server = await ResolveServerAsync(context, serverId).ConfigureAwait(false);
+        if (server == null)
+            return;
+
+        BotAccessLevel access = AccessResolver.GetAccess(context.Member, server.Config);
+        if (access < BotAccessLevel.Management)
+        {
+            await DenyAsync(context, server.Config).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            PlayersResponse response = await server.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
+            List<ApiPlayer> ranked = response.Players.Where(p => p.HasRank).ToList();
+            int online = response.GetOnline();
+            int maximum = response.GetMaximum();
+
+            string desc;
+            if (ranked.Count == 0)
+            {
+                desc = "На сервере нет игроков с рангами.";
+            }
+            else
+            {
+                var sb = new StringBuilder();
+                foreach (ApiPlayer p in ranked)
+                {
+                    string name = runtime.Config.ShowPlayerNames ? DiscordPresentation.Limit(p.DisplayName, 80) : "имя скрыто";
+                    string line = $"`#{p.Id}` **[{p.DisplayRank}]** {name} — `{p.Role}`\n";
+                    if (sb.Length + line.Length > 3800)
+                    {
+                        sb.Append($"\n...ещё {ranked.Count - sb.Length} игрок(ов).");
+                        break;
+                    }
+                    sb.Append(line);
+                }
+                desc = sb.ToString();
+            }
+
+            DiscordEmbed embed = new DiscordEmbedBuilder()
+                .WithTitle($"{server.Config.DisplayName} | Игроки с рангами: {ranked.Count}")
+                .WithDescription(desc)
+                .WithColor(new DiscordColor(241, 196, 15))
+                .AddField("Сервер", $"{server.Config.DisplayName} ({online}/{maximum})", true)
+                .WithFooter("Доступ: Руководство")
+                .WithTimestamp(DateTimeOffset.UtcNow)
+                .Build();
+
+            await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed)).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await RespondErrorAsync(context, server.Config, ex).ConfigureAwait(false);
+        }
+    }
+
     [SlashCommand("console", "Выполнить команду на сервере.")]
     public async Task ConsoleAsync(
         InteractionContext context,
@@ -259,6 +325,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             .AddField("/server server:<NR/MRP>", "Состояние, онлайн и адрес выбранного сервера.")
             .AddField("/linksteam server:<NR/MRP>", "Получить код привязки для выбранного сервера.")
             .AddField("/players server:<NR/MRP>", "Список игроков. Требуется серверная роль и RA.")
+            .AddField("/listranked server:<NR/MRP>", "Список игроков с рангами на сервере (Руководство).")
             .AddField("/console server:<NR/MRP> text:<команда>", "Выполнить произвольную команду на сервере.")
             .AddField("/ban server:<NR/MRP> player:<ID> duration:<время> reason:<причина>", "Забанить игрока на сервере.")
             .AddField("/kick server:<NR/MRP> player:<ID> reason:<причина>", "Кикнуть игрока с сервера.")

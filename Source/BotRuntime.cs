@@ -98,7 +98,8 @@ internal enum BotAccessLevel
 {
     Guest = 0,
     Ra = 1,
-    Creator = 2
+    Management = 2,
+    Creator = 3
 }
 
 internal static class AccessResolver
@@ -113,6 +114,8 @@ internal static class AccessResolver
             return BotAccessLevel.Guest;
         if (config.CreatorKeyRoleIds.Any(roleIds.Contains))
             return BotAccessLevel.Creator;
+        if (config.ManagementRoleIds.Any(roleIds.Contains))
+            return BotAccessLevel.Management;
         if (config.RaRoleIds.Any(roleIds.Contains))
             return BotAccessLevel.Ra;
         return BotAccessLevel.Guest;
@@ -121,6 +124,7 @@ internal static class AccessResolver
     public static string ApiName(this BotAccessLevel access) => access switch
     {
         BotAccessLevel.Creator => "creator",
+        BotAccessLevel.Management => "management",
         BotAccessLevel.Ra => "ra",
         _ => "guest"
     };
@@ -128,6 +132,7 @@ internal static class AccessResolver
     public static string DisplayName(this BotAccessLevel access) => access switch
     {
         BotAccessLevel.Creator => "Ключ Создателя",
+        BotAccessLevel.Management => "Руководство",
         BotAccessLevel.Ra => "RA",
         _ => "Гость"
     };

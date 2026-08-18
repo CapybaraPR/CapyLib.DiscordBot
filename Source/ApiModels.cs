@@ -221,6 +221,9 @@ internal sealed class BridgeLogField
 
     [JsonPropertyName("value")]
     public string Value { get; set; } = string.Empty;
+
+    [JsonPropertyName("inline")]
+    public bool Inline { get; set; } = true;
 }
 
 internal sealed class LinkCodeRequest

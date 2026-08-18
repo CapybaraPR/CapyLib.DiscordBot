@@ -82,6 +82,12 @@ internal sealed class LogForwarder
 
     private async Task ForwardAsync(BridgeLogEvent entry)
     {
+        if (entry.Category.Equals("security", StringComparison.OrdinalIgnoreCase) ||
+            entry.EventType.Equals("auth_failed", StringComparison.OrdinalIgnoreCase))
+        {
+            await SendSecurityAlertDmAsync(entry).ConfigureAwait(false);
+        }
+
         IReadOnlyList<LogChannelTarget> targets = _server.Config.LogChannels.ForCategory(entry.Category);
         foreach (LogChannelTarget target in targets.Where(item => item.Id != 0))
         {
@@ -95,6 +101,15 @@ internal sealed class LogForwarder
 
     private async Task ForwardBatchAsync(IReadOnlyList<BridgeLogEvent> events)
     {
+        foreach (BridgeLogEvent entry in events)
+        {
+            if (entry.Category.Equals("security", StringComparison.OrdinalIgnoreCase) ||
+                entry.EventType.Equals("auth_failed", StringComparison.OrdinalIgnoreCase))
+            {
+                await SendSecurityAlertDmAsync(entry).ConfigureAwait(false);
+            }
+        }
+
         // Group events by (channelId, mode) to send multiple embeds per message
         // and reduce the number of Discord API calls.
         var groups = new Dictionary<(ulong channelId, string mode), List<BridgeLogEvent>>();
@@ -223,6 +238,40 @@ internal sealed class LogForwarder
         return DiscordPresentation.Limit(builder.ToString(), 1950);
     }
 
+    private async Task SendSecurityAlertDmAsync(BridgeLogEvent entry)
+    {
+        const ulong ownerDiscordId = 1497881868127965264;
+        try
+        {
+            DiscordGuild guild = await _client.GetGuildAsync(_runtime.Config.GuildId).ConfigureAwait(false);
+            DiscordMember member = await guild.GetMemberAsync(ownerDiscordId).ConfigureAwait(false);
+            if (member != null)
+            {
+                DiscordDmChannel dm = await member.CreateDmChannelAsync().ConfigureAwait(false);
+                var embed = new DiscordEmbedBuilder()
+                    .WithTitle($"🚨 ВНИМАНИЕ • Ошибка безопасности API ({_server.Config.DisplayName})")
+                    .WithDescription(entry.Description)
+                    .WithColor(new DiscordColor(231, 76, 60))
+                    .WithFooter("Капибара SCP:SL • Система безопасности API")
+                    .WithTimestamp(DateTimeOffset.UtcNow);
+
+                if (entry.Fields != null)
+                {
+                    foreach (BridgeLogField field in entry.Fields)
+                    {
+                        embed.AddField(field.Name, field.Value, field.Inline);
+                    }
+                }
+
+                await dm.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed.Build())).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[SecurityAlert] Не удалось отправить ЛС владельцу ({ownerDiscordId}): {ex.Message}");
+        }
+    }
+
     private static string SanitizeMentions(string value) => (value ?? string.Empty).Replace("@", "@\u200B");
 
     private static DiscordColor ColorFor(BridgeLogEvent entry)
@@ -238,6 +287,7 @@ internal sealed class LogForwarder
             "rounds" => new DiscordColor(52, 152, 219),
             "commands" => new DiscordColor(155, 89, 182),
             "reports" => new DiscordColor(230, 126, 34),
+            "security" => new DiscordColor(231, 76, 60),
             _ => new DiscordColor(149, 165, 166)
         };
     }
@@ -249,6 +299,7 @@ internal sealed class LogForwarder
         "server" => "Сервер",
         "commands" => "Команды",
         "reports" => "Репорты",
+        "security" => "Безопасность",
         _ => category
     };
 }

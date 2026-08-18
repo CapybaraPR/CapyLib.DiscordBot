@@ -68,7 +68,20 @@ internal sealed class BridgeRequestSigner : IDisposable
 
         string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
         string method = request.Method.Method.ToUpperInvariant();
-        string pathAndQuery = request.RequestUri?.PathAndQuery ?? "/";
+        string pathAndQuery;
+        if (request.RequestUri == null)
+        {
+            pathAndQuery = "/";
+        }
+        else if (request.RequestUri.IsAbsoluteUri)
+        {
+            pathAndQuery = request.RequestUri.PathAndQuery;
+        }
+        else
+        {
+            string raw = request.RequestUri.OriginalString;
+            pathAndQuery = raw.StartsWith("/") ? raw : "/" + raw;
+        }
         string bodyHashHex = ComputeSha256Hex(bodyBytes);
 
         string payloadToSign = $"{timestamp}\n{method}\n{pathAndQuery}\n{bodyHashHex}";

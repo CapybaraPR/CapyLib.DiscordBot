@@ -111,7 +111,11 @@ internal static class AccessResolver
             return false;
 
         HashSet<ulong> userRoleIds = member.Roles.Select(role => role.Id).ToHashSet();
-        if (config.RequiredServerRoleIds.Count > 0 && !config.RequiredServerRoleIds.All(userRoleIds.Contains))
+        bool isFullAccess = (config.RolesPermissions ?? new List<RolePermissionConfig>())
+            .Where(r => r.AllowedCommands.Contains("*") || r.AllowedCommands.Contains("all"))
+            .Any(r => r.DiscordRoleIds.Any(userRoleIds.Contains));
+
+        if (!isFullAccess && config.RequiredServerRoleIds.Count > 0 && !config.RequiredServerRoleIds.All(userRoleIds.Contains))
             return false;
 
         string normalizedCommand = commandName.Trim().ToLowerInvariant().TrimStart('/');
@@ -129,7 +133,11 @@ internal static class AccessResolver
             return result;
 
         HashSet<ulong> userRoleIds = member.Roles.Select(role => role.Id).ToHashSet();
-        if (config.RequiredServerRoleIds.Count > 0 && !config.RequiredServerRoleIds.All(userRoleIds.Contains))
+        bool isFullAccess = (config.RolesPermissions ?? new List<RolePermissionConfig>())
+            .Where(r => r.AllowedCommands.Contains("*") || r.AllowedCommands.Contains("all"))
+            .Any(r => r.DiscordRoleIds.Any(userRoleIds.Contains));
+
+        if (!isFullAccess && config.RequiredServerRoleIds.Count > 0 && !config.RequiredServerRoleIds.All(userRoleIds.Contains))
             return result;
 
         var rolesById = (config.RolesPermissions ?? new List<RolePermissionConfig>())
@@ -175,7 +183,11 @@ internal static class AccessResolver
             return "Гость";
 
         HashSet<ulong> userRoleIds = member.Roles.Select(role => role.Id).ToHashSet();
-        if (config.RequiredServerRoleIds.Count > 0 && !config.RequiredServerRoleIds.All(userRoleIds.Contains))
+        bool isFullAccess = (config.RolesPermissions ?? new List<RolePermissionConfig>())
+            .Where(r => r.AllowedCommands.Contains("*") || r.AllowedCommands.Contains("all"))
+            .Any(r => r.DiscordRoleIds.Any(userRoleIds.Contains));
+
+        if (!isFullAccess && config.RequiredServerRoleIds.Count > 0 && !config.RequiredServerRoleIds.All(userRoleIds.Contains))
             return "Нет роли сервера";
 
         var matched = (config.RolesPermissions ?? new List<RolePermissionConfig>())

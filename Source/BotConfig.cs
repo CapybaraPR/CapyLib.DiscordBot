@@ -60,6 +60,9 @@ internal sealed class BotConfig
     [JsonPropertyName("management_role_ids")]
     public List<ulong> ManagementRoleIds { get; set; } = new();
 
+    [JsonPropertyName("creator_key_role_ids")]
+    public List<ulong> CreatorKeyRoleIds { get; set; } = new();
+
     [JsonPropertyName("roles_permissions")]
     public List<RolePermissionConfig> RolesPermissions { get; set; } = new();
 
@@ -147,6 +150,7 @@ internal sealed class BotConfig
         RaRoleIds = (RaRoleIds ?? new List<ulong>()).ToList(),
         ManagementRoleIds = (ManagementRoleIds ?? new List<ulong>()).ToList(),
         CreatorKeyRoleIds = (CreatorKeyRoleIds ?? new List<ulong>()).ToList(),
+        RolesPermissions = (RolesPermissions ?? new List<RolePermissionConfig>()).ToList(),
         LogChannels = LogChannels ?? new LogChannelsConfig()
     };
 

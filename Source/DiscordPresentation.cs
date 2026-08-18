@@ -19,10 +19,13 @@ internal static class DiscordPresentation
             ? status.Address 
             : (!string.IsNullOrWhiteSpace(server.PublicAddress) ? server.PublicAddress : "127.0.0.1:7777");
 
+        int online = status.GetOnline();
+        int maximum = status.GetMaximum();
+
         return new DiscordEmbedBuilder()
             .WithTitle($"{server.DisplayName} | {actualName}")
             .WithColor(new DiscordColor(46, 204, 113))
-            .AddField("Онлайн", $"**{status.Online}/{Math.Max(status.Maximum, 1)}**", true)
+            .AddField("Онлайн", $"**{online}/{maximum}**", true)
             .AddField("Адрес", Safe(address, "Не указан"), true)
             .AddField("Состояние", Safe(round, "Лобби"), true)
             .AddField("Время раунда", Safe(status.RoundTime, "00:00"), true)

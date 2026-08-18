@@ -15,7 +15,7 @@ internal sealed class HealthResponse
 internal sealed class ServerStatus
 {
     [JsonPropertyName("success")]
-    public bool Success { get; set; }
+    public bool Success { get; set; } = true;
 
     [JsonPropertyName("online")]
     public int Online { get; set; }
@@ -40,6 +40,30 @@ internal sealed class ServerStatus
 
     [JsonPropertyName("utc")]
     public string Utc { get; set; } = string.Empty;
+
+    [JsonPropertyName("server")]
+    public NestedServerStatus? Server { get; set; }
+
+    public int GetOnline() => Online > 0 ? Online : (Server?.PlayersCount ?? Online);
+    public int GetMaximum() => Maximum > 0 ? Maximum : (Server?.MaxPlayers ?? (Maximum > 0 ? Maximum : 25));
+}
+
+internal sealed class NestedServerStatus
+{
+    [JsonPropertyName("players_count")]
+    public int PlayersCount { get; set; }
+
+    [JsonPropertyName("max_players")]
+    public int MaxPlayers { get; set; }
+
+    [JsonPropertyName("server_name")]
+    public string? ServerName { get; set; }
+
+    [JsonPropertyName("public_address")]
+    public string? PublicAddress { get; set; }
+
+    [JsonPropertyName("tps")]
+    public double Tps { get; set; }
 }
 
 internal sealed class PlayersResponse

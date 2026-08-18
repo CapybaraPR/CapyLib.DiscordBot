@@ -86,7 +86,7 @@ internal sealed class StatusUpdater
                 ? cached.Status.Address
                 : server.Config.PublicAddress;
             string presence = cached.Error == null && cached.Status != null
-                ? $"{server.Config.DisplayName} | {cached.Status.Online}/{cached.Status.Maximum} | {address}"
+                ? $"{server.Config.DisplayName} | {cached.Status.GetOnline()}/{cached.Status.GetMaximum()} | {address}"
                 : $"{server.Config.DisplayName} | офлайн | {address}";
 
             try

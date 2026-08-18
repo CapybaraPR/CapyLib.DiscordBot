@@ -29,6 +29,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
     }
 
     [SlashCommand("players", "Показать список игроков на сервере.")]
+    [SlashCommandPermissions(Permissions.ManageMessages)]
     public async Task PlayersAsync(
         InteractionContext context,
         [Option("server", "Выберите NR или MRP.")]
@@ -68,6 +69,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
     }
 
     [SlashCommand("listranked", "Показать список игроков с рангами на сервере (Руководство).")]
+    [SlashCommandPermissions(Permissions.ManageGuild)]
     public async Task ListRankedAsync(
         InteractionContext context,
         [Option("server", "Выберите NR или MRP.")]
@@ -133,6 +135,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
     }
 
     [SlashCommand("console", "Выполнить команду на сервере.")]
+    [SlashCommandPermissions(Permissions.Administrator)]
     public async Task ConsoleAsync(
         InteractionContext context,
         [Option("server", "Выберите NR или MRP.")]
@@ -159,6 +162,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
     }
 
     [SlashCommand("ban", "Забанить игрока.")]
+    [SlashCommandPermissions(Permissions.BanMembers)]
     public async Task BanAsync(
         InteractionContext context,
         [Option("server", "Выберите NR или MRP.")]
@@ -188,6 +192,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
     }
 
     [SlashCommand("kick", "Кикнуть игрока.")]
+    [SlashCommandPermissions(Permissions.KickMembers)]
     public async Task KickAsync(
         InteractionContext context,
         [Option("server", "Выберите NR или MRP.")]
@@ -216,6 +221,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
     }
 
     [SlashCommand("setgroup", "Установить или снять группу игрока через pm setgroup.")]
+    [SlashCommandPermissions(Permissions.Administrator)]
     public async Task SetGroupAsync(
         InteractionContext context,
         [Option("server", "Выберите NR или MRP.")]

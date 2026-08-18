@@ -80,20 +80,50 @@ internal sealed class StatusUpdater
         int index = 0;
         while (!cancellationToken.IsCancellationRequested)
         {
+            if (_runtime.Servers.Count == 0)
+            {
+                await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
             ServerRuntime server = _runtime.Servers[index % _runtime.Servers.Count];
             CachedStatus cached = GetCache(server.Config.Id);
             string address = !string.IsNullOrWhiteSpace(cached.Status?.Address)
                 ? cached.Status.Address
                 : server.Config.PublicAddress;
-            string presence = cached.Error == null && cached.Status != null
-                ? $"{server.Config.DisplayName} | {cached.Status.GetOnline()}/{cached.Status.GetMaximum()} | {address}"
-                : $"{server.Config.DisplayName} | офлайн | {address}";
+
+            string presence;
+            UserStatus statusColor;
+
+            if (cached.Error != null || cached.Status == null)
+            {
+                // Сервер недоступен -> Не беспокоить (красный кружок)
+                statusColor = UserStatus.DoNotDisturb;
+                presence = $"{server.Config.DisplayName} | Офлайн | {address}";
+            }
+            else
+            {
+                int online = cached.Status.GetOnline();
+                int maximum = cached.Status.GetMaximum();
+                if (online > 0)
+                {
+                    // Сервер с онлайном -> В сети (зелёный кружок)
+                    statusColor = UserStatus.Online;
+                    presence = $"{server.Config.DisplayName} | {online}/{maximum} | {address}";
+                }
+                else
+                {
+                    // Сервер пуст (0 онлайна) -> Не активен (жёлтый полумесяц)
+                    statusColor = UserStatus.Idle;
+                    presence = $"{server.Config.DisplayName} | 0/{maximum} | {address}";
+                }
+            }
 
             try
             {
                 await _client.UpdateStatusAsync(
                         new DiscordActivity(DiscordPresentation.Limit(presence.TrimEnd(' ', '|'), 128), ActivityType.Watching),
-                        UserStatus.Online)
+                        statusColor)
                     .ConfigureAwait(false);
             }
             catch (Exception ex)

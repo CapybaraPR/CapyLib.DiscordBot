@@ -11,6 +11,7 @@
     <Company>CapybaraPR</Company>
     <Product>CapyLib Discord Bot</Product>
     <Version>1.2.0</Version>
+    <RollForward>LatestMajor</RollForward>
     <Description>Multi-server Discord Bot for SCP:SL EXILED CapyLib Bridge with SSH RSA Signature Authentication</Description>
   </PropertyGroup>
 

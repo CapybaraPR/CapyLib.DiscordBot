@@ -315,46 +315,69 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         }
     }
 
-    [SlashCommand("discord_help", "Показать команды бота и доступ к NR/MRP.")]
+    [SlashCommand("help", "Справка по доступным командам и уровню доступа.")]
     public async Task HelpAsync(InteractionContext context)
     {
         BotRuntime runtime = BotRuntime.Current;
-        string access = string.Join(
-            "\n",
-            runtime.Servers.Select(server =>
-                $"**{server.Config.DisplayName}:** {AccessResolver.GetHighestRoleDisplayName(context.Member, server.Config)}"));
+
+        var accessSb = new StringBuilder();
+        foreach (ServerRuntime server in runtime.Servers)
+        {
+            string roleName = AccessResolver.GetHighestRoleDisplayName(context.Member, server.Config);
+            string icon = roleName switch
+            {
+                "Владелец проекта" => "👑",
+                "Ключ Создателя" => "🔑",
+                "Высшее Руководство" => "⚡",
+                "Руководство (RA)" or "Руководство" => "🛡️",
+                "Администрация" => "⚔️",
+                "Гость" => "👤",
+                _ => "🔹"
+            };
+            accessSb.AppendLine($"• **{server.Config.DisplayName}:** {icon} `{roleName}`");
+        }
 
         var embed = new DiscordEmbedBuilder()
-            .WithTitle("CapyLib Discord Bot — Доступные команды")
-            .WithDescription(access)
-            .AddField("/server server:<NR/MRP>", "Состояние, онлайн и адрес выбранного сервера.")
-            .AddField("/linksteam server:<NR/MRP>", "Получить код привязки для выбранного сервера.");
+            .WithTitle("📖 Справка по командам бота")
+            .WithColor(new DiscordColor(88, 101, 242))
+            .AddField("🛡️ Ваш уровень доступа", accessSb.ToString(), false);
 
+        var generalSb = new StringBuilder();
+        generalSb.AppendLine("` /server ` `server: <NR/MRP>`\n└ *Состояние, онлайн и адрес выбранного сервера.*\n");
+        generalSb.AppendLine("` /linksteam ` `server: <NR/MRP>`\n└ *Получить персональный код привязки Steam к серверу.*");
+        embed.AddField("🌐 Общие команды", generalSb.ToString(), false);
+
+        var infoSb = new StringBuilder();
         bool canPlayers = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "players"));
-        if (canPlayers)
-            embed.AddField("/players server:<NR/MRP>", "Список игроков онлайн на выбранном сервере.");
-
         bool canListRanked = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "listranked"));
+        if (canPlayers)
+            infoSb.AppendLine("` /players ` `server: <NR/MRP>`\n└ *Список игроков онлайн и их игровые роли.*\n");
         if (canListRanked)
-            embed.AddField("/listranked server:<NR/MRP>", "Список игроков с рангами (Руководство).");
+            infoSb.AppendLine("` /listranked ` `server: <NR/MRP>`\n└ *Список присутствующих игроков с рангами/привилегиями.*");
 
+        if (infoSb.Length > 0)
+            embed.AddField("👥 Мониторинг игроков", infoSb.ToString().TrimEnd(), false);
+
+        var adminSb = new StringBuilder();
         bool canConsole = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "console"));
-        if (canConsole)
-            embed.AddField("/console server:<NR/MRP> text:<команда>", "Выполнить произвольную команду на сервере.");
-
         bool canBan = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "ban"));
-        if (canBan)
-            embed.AddField("/ban server:<NR/MRP> player:<ID> duration:<время> reason:<причина>", "Забанить игрока на сервере.");
-
         bool canKick = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "kick"));
-        if (canKick)
-            embed.AddField("/kick server:<NR/MRP> player:<ID> reason:<причина>", "Кикнуть игрока с сервера.");
-
         bool canSetGroup = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "setgroup"));
-        if (canSetGroup)
-            embed.AddField("/setgroup server:<NR/MRP> player:<ID> group:<выбор>", "Установить или снять группу игрока.");
 
-        embed.WithColor(new DiscordColor(149, 165, 166));
+        if (canConsole)
+            adminSb.AppendLine("` /console ` `server: <NR/MRP>` `text: <команда>`\n└ *Отправить серверную команду в консоль сервера.*\n");
+        if (canKick)
+            adminSb.AppendLine("` /kick ` `server: <NR/MRP>` `player: <ID>` `reason: <причина>`\n└ *Кикнуть указанного игрока с сервера.*\n");
+        if (canBan)
+            adminSb.AppendLine("` /ban ` `server: <NR/MRP>` `player: <ID>` `duration: <время>` `reason: <причина>`\n└ *Заблокировать игрока на сервере.*\n");
+        if (canSetGroup)
+            adminSb.AppendLine("` /setgroup ` `server: <NR/MRP>` `player: <ID>` `group: <выбор>`\n└ *Установить или снять привилегию/ранг игрока.*");
+
+        if (adminSb.Length > 0)
+            embed.AddField("⚡ Управление и модерация", adminSb.ToString().TrimEnd(), false);
+
+        embed.WithFooter("Капибара SCP:SL • Доступ определяется ролями Discord")
+             .WithTimestamp(DateTimeOffset.UtcNow);
 
         await context.CreateResponseAsync(
             InteractionResponseType.ChannelMessageWithSource,

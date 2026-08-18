@@ -8,11 +8,11 @@ internal static class DiscordPresentation
         {
             "in_progress" => "Раунд идёт",
             "ended" => "Раунд завершён",
-            "lobby" => "Лобби",
-            _ => Safe(status.RoundState, "Лобби")
+            "lobby" => "В лобби",
+            _ => Safe(status.RoundState, "В лобби")
         };
         string actualName = string.IsNullOrWhiteSpace(status.ServerName)
-            ? "SCP:SL сервер"
+            ? server.DisplayName
             : Limit(status.ServerName, 200);
 
         string address = !string.IsNullOrWhiteSpace(status.Address) 
@@ -23,24 +23,25 @@ internal static class DiscordPresentation
         int maximum = status.GetMaximum();
 
         return new DiscordEmbedBuilder()
-            .WithTitle($"{server.DisplayName} | {actualName}")
+            .WithTitle($"🎮 {server.DisplayName} • Состояние сервера")
             .WithColor(new DiscordColor(46, 204, 113))
-            .AddField("Онлайн", $"**{online}/{maximum}**", true)
-            .AddField("Адрес", Safe(address, "Не указан"), true)
-            .AddField("Состояние", Safe(round, "Лобби"), true)
-            .AddField("Время раунда", Safe(status.RoundTime, "00:00"), true)
-            .AddField("TPS", status.Tps > 0 ? status.Tps.ToString("0.0") : "60.0", true)
-            .WithFooter($"{server.DisplayName} | обновляется автоматически")
+            .AddField("👥 Онлайн", $"**{online}/{maximum}**", true)
+            .AddField("🌐 Адрес", Safe(address, "Не указан"), true)
+            .AddField("⏳ Состояние", Safe(round, "В лобби"), true)
+            .AddField("⏱️ Время раунда", Safe(status.RoundTime, "00:00"), true)
+            .AddField("⚡ TPS", status.Tps > 0 ? status.Tps.ToString("0.0") : "60.0", true)
+            .AddField("🏷️ Название", Limit(actualName, 60), true)
+            .WithFooter("Капибара SCP:SL • Обновляется автоматически")
             .WithTimestamp(DateTimeOffset.UtcNow)
             .Build();
     }
 
     public static DiscordEmbed BuildOffline(ServerConfig server, string error) => new DiscordEmbedBuilder()
-        .WithTitle($"{server.DisplayName} | сервер недоступен")
-        .WithDescription(Safe(Limit(error, 1000), "Сервер временно недоступен или выключен."))
-        .AddField("Адрес", Safe(server.PublicAddress, "Не указан"), true)
+        .WithTitle($"🔴 {server.DisplayName} • Сервер недоступен")
+        .WithDescription(Safe(Limit(error, 1000), "Сервер временно выключен или перезагружается."))
+        .AddField("🌐 Адрес", Safe(server.PublicAddress, "Не указан"), true)
         .WithColor(new DiscordColor(231, 76, 60))
-        .WithFooter($"{server.DisplayName} | Bridge API не отвечает")
+        .WithFooter("Капибара SCP:SL • Bridge API не отвечает")
         .WithTimestamp(DateTimeOffset.UtcNow)
         .Build();
 

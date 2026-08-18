@@ -55,9 +55,10 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             int maximum = response.GetMaximum();
             string players = BuildPlayerList(response, runtime.Config.ShowPlayerNames);
             DiscordEmbed embed = new DiscordEmbedBuilder()
-                .WithTitle($"{server.Config.DisplayName} | игроки: {online}/{maximum}")
+                .WithTitle($"👥 {server.Config.DisplayName} • Список игроков ({online}/{maximum})")
                 .WithDescription(players)
-                .WithColor(new DiscordColor(52, 152, 219))
+                .WithColor(new DiscordColor(88, 101, 242))
+                .WithFooter($"Капибара SCP:SL • Онлайн: {online}/{maximum}")
                 .WithTimestamp(DateTimeOffset.UtcNow)
                 .Build();
             await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed)).ConfigureAwait(false);
@@ -98,7 +99,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             string desc;
             if (ranked.Count == 0)
             {
-                desc = "На сервере нет игроков с рангами.";
+                desc = "На сервере сейчас нет игроков с рангами.";
             }
             else
             {
@@ -118,11 +119,10 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             }
 
             DiscordEmbed embed = new DiscordEmbedBuilder()
-                .WithTitle($"{server.Config.DisplayName} | Игроки с рангами: {ranked.Count}")
+                .WithTitle($"👑 {server.Config.DisplayName} • Игроки с рангами ({ranked.Count})")
                 .WithDescription(desc)
                 .WithColor(new DiscordColor(241, 196, 15))
-                .AddField("Сервер", $"{server.Config.DisplayName} ({online}/{maximum})", true)
-                .WithFooter($"Доступ: {AccessResolver.GetHighestRoleDisplayName(context.Member, server.Config)}")
+                .WithFooter($"Капибара SCP:SL • Онлайн: {online}/{maximum}")
                 .WithTimestamp(DateTimeOffset.UtcNow)
                 .Build();
 
@@ -405,19 +405,22 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             CommandResponse response = await server.Api.ExecuteCommandAsync(request, CancellationToken.None)
                 .ConfigureAwait(false);
             string output = string.IsNullOrWhiteSpace(response.Output)
-                ? "Команда обработана без текстового ответа."
+                ? "Команда выполнена без ответа."
                 : response.Output;
+
             DiscordEmbed embed = new DiscordEmbedBuilder()
-                .WithTitle(response.Success ? $"{actionTitle}: успешно" : $"{actionTitle}: ошибка")
+                .WithTitle(response.Success ? $"✅ {actionTitle} • Успешно" : $"❌ {actionTitle} • Ошибка")
                 .WithDescription(DiscordPresentation.CodeBlock(output))
                 .AddField("Сервер", server.Config.DisplayName, true)
                 .AddField("Уровень", access.DisplayName(), true)
-                .AddField("Команда", DiscordPresentation.Limit(response.Command, 1024))
+                .AddField("Команда", $"`{DiscordPresentation.Limit(response.Command, 100)}`", true)
                 .WithColor(response.Success
                     ? new DiscordColor(46, 204, 113)
-                    : new DiscordColor(230, 126, 34))
+                    : new DiscordColor(231, 76, 60))
+                .WithFooter("Капибара SCP:SL")
                 .WithTimestamp(DateTimeOffset.UtcNow)
                 .Build();
+
             await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed)).ConfigureAwait(false);
             await SendAuditAsync(context, server.Config, response.Command, access, response.Success, output)
                 .ConfigureAwait(false);
@@ -434,13 +437,16 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
     {
         int minutes = Math.Max(1, (int)Math.Ceiling(response.ExpiresInSeconds / 60d));
         return new DiscordEmbedBuilder()
-            .WithTitle($"Привязка Discord к {server.DisplayName}")
+            .WithTitle($"🔗 {server.DisplayName} • Привязка Steam")
             .WithDescription(
-                $"**Код привязки к {server.DisplayName}:** `{response.Code}`\n" +
-                $"Зайдите на **{server.DisplayName}** и введите в игровой консоли: `.linkdiscord {response.Code}`\n" +
-                $"Код действует **{minutes} минут**.\n\n" +
-                $"Новый вызов `/linksteam server:{server.Id}` отменяет предыдущий код этого сервера.")
-            .WithColor(new DiscordColor(52, 152, 219))
+                $"Ваш персональный код привязки:\n```text\n.linkdiscord {response.Code}\n```\n" +
+                $"**Как активировать:**\n" +
+                $"1. Зайдите на сервер **{server.DisplayName}** в игре.\n" +
+                $"2. Откройте игровую консоль (нажав **~** / **ё**).\n" +
+                $"3. Введите команду: `.linkdiscord {response.Code}`\n\n" +
+                $"⏱️ *Код действует {minutes} мин. Повторный вызов команды аннулирует старый код.*")
+            .WithColor(new DiscordColor(88, 101, 242))
+            .WithFooter("Капибара SCP:SL")
             .WithTimestamp(DateTimeOffset.UtcNow)
             .Build();
     }
@@ -451,8 +457,13 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         if (runtime.TryGetServer(serverId, out ServerRuntime? server) && server != null)
             return server;
 
-        await context.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
-            $"Сервер '{serverId}' не настроен в bot-config.json.")).ConfigureAwait(false);
+        var embed = new DiscordEmbedBuilder()
+            .WithTitle("⚠️ Сервер не найден")
+            .WithDescription($"Сервер `{serverId}` не настроен в конфигурации бота.")
+            .WithColor(new DiscordColor(231, 76, 60))
+            .WithFooter("Капибара SCP:SL")
+            .Build();
+        await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed)).ConfigureAwait(false);
         return null;
     }
 
@@ -461,37 +472,51 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             InteractionResponseType.DeferredChannelMessageWithSource,
             new DiscordInteractionResponseBuilder().AsEphemeral(ephemeral));
 
-    private static Task DenyAsync(InteractionContext context, ServerConfig server) =>
-        context.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
-            $"Недостаточно прав для {server.DisplayName}. Требуется роль сервера и общая административная роль."));
+    private static Task DenyAsync(InteractionContext context, ServerConfig server)
+    {
+        var embed = new DiscordEmbedBuilder()
+            .WithTitle($"🚫 {server.DisplayName} • Доступ ограничен")
+            .WithDescription("У вас недостаточно прав для выполнения этой команды на выбранном сервере.")
+            .WithColor(new DiscordColor(231, 76, 60))
+            .WithFooter("Капибара SCP:SL")
+            .Build();
+        return context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed));
+    }
 
     private static Task RespondErrorAsync(
         InteractionContext context,
         ServerConfig server,
-        Exception exception) =>
-        context.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
-            $"Ошибка {server.DisplayName}: {FriendlyError(exception)}"));
+        Exception exception)
+    {
+        var embed = new DiscordEmbedBuilder()
+            .WithTitle($"⚠️ {server.DisplayName} • Ошибка выполнения")
+            .WithDescription(FriendlyError(exception))
+            .WithColor(new DiscordColor(231, 76, 60))
+            .WithFooter("Капибара SCP:SL")
+            .Build();
+        return context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed));
+    }
 
     private static string FriendlyError(Exception exception) => exception switch
     {
         BridgeApiException api => api.Message,
-        HttpRequestException => "не удалось подключиться к Bridge API.",
-        TaskCanceledException => "Bridge API не ответил вовремя.",
+        HttpRequestException => "Не удалось подключиться к серверному Bridge API.",
+        TaskCanceledException => "Серверный Bridge API не ответил вовремя.",
         InvalidOperationException invalid => invalid.Message,
-        _ => "внутренняя ошибка бота."
+        _ => "Внутренняя ошибка обработки команды."
     };
 
     private static string BuildPlayerList(PlayersResponse response, bool showNames)
     {
         if (response.Players.Count == 0)
-            return "Сервер пуст.";
+            return "На сервере сейчас нет игроков.";
 
         var builder = new StringBuilder();
         int shown = 0;
         foreach (ApiPlayer player in response.Players)
         {
-            string name = showNames ? DiscordPresentation.Limit(player.DisplayName, 80) : "имя скрыто";
-            string line = $"`#{player.Id}` {name} - `{player.Role}`\n";
+            string name = showNames ? DiscordPresentation.Limit(player.DisplayName, 60) : "имя скрыто";
+            string line = $"`#{player.Id}` {name} — `{player.Role}`\n";
             if (builder.Length + line.Length > 3800)
                 break;
             builder.Append(line);
@@ -518,13 +543,14 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         {
             DiscordChannel channel = await context.Client.GetChannelAsync(server.AuditChannelId).ConfigureAwait(false);
             DiscordEmbed embed = new DiscordEmbedBuilder()
-                .WithTitle(success ? "Серверная команда выполнена" : "Серверная команда отклонена")
+                .WithTitle(success ? "🛡️ Аудит • Команда выполнена" : "⚠️ Аудит • Команда отклонена")
                 .AddField("Сервер", server.DisplayName, true)
                 .AddField("Уровень", access.DisplayName(), true)
-                .AddField("Пользователь", $"{context.User.Mention} (`{context.User.Id}`)")
-                .AddField("Команда", DiscordPresentation.Limit(command, 1024))
-                .AddField("Результат", DiscordPresentation.Limit(result, 1024))
+                .AddField("Пользователь", $"{context.User.Mention} (`{context.User.Id}`)", false)
+                .AddField("Команда", $"`{DiscordPresentation.Limit(command, 1024)}`", false)
+                .AddField("Результат", DiscordPresentation.CodeBlock(result, 1000), false)
                 .WithColor(success ? new DiscordColor(46, 204, 113) : new DiscordColor(231, 76, 60))
+                .WithFooter("Капибара SCP:SL • Логирование действий")
                 .WithTimestamp(DateTimeOffset.UtcNow)
                 .Build();
             await channel.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed)).ConfigureAwait(false);

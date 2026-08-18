@@ -9,20 +9,24 @@ internal static class DiscordPresentation
             "in_progress" => "Раунд идёт",
             "ended" => "Раунд завершён",
             "lobby" => "Лобби",
-            _ => status.RoundState
+            _ => Safe(status.RoundState, "Лобби")
         };
         string actualName = string.IsNullOrWhiteSpace(status.ServerName)
             ? "SCP:SL сервер"
             : Limit(status.ServerName, 200);
 
+        string address = !string.IsNullOrWhiteSpace(status.Address) 
+            ? status.Address 
+            : (!string.IsNullOrWhiteSpace(server.PublicAddress) ? server.PublicAddress : "127.0.0.1:7777");
+
         return new DiscordEmbedBuilder()
             .WithTitle($"{server.DisplayName} | {actualName}")
             .WithColor(new DiscordColor(46, 204, 113))
-            .AddField("Онлайн", $"**{status.Online}/{status.Maximum}**", true)
-            .AddField("Адрес", string.IsNullOrWhiteSpace(status.Address) ? "Не указан" : status.Address, true)
-            .AddField("Состояние", round, true)
-            .AddField("Время раунда", status.RoundTime, true)
-            .AddField("TPS", status.Tps.ToString("0.0"), true)
+            .AddField("Онлайн", $"**{status.Online}/{Math.Max(status.Maximum, 1)}**", true)
+            .AddField("Адрес", Safe(address, "Не указан"), true)
+            .AddField("Состояние", Safe(round, "Лобби"), true)
+            .AddField("Время раунда", Safe(status.RoundTime, "00:00"), true)
+            .AddField("TPS", status.Tps > 0 ? status.Tps.ToString("0.0") : "60.0", true)
             .WithFooter($"{server.DisplayName} | обновляется автоматически")
             .WithTimestamp(DateTimeOffset.UtcNow)
             .Build();
@@ -30,12 +34,17 @@ internal static class DiscordPresentation
 
     public static DiscordEmbed BuildOffline(ServerConfig server, string error) => new DiscordEmbedBuilder()
         .WithTitle($"{server.DisplayName} | сервер недоступен")
-        .WithDescription(Limit(error, 1000))
-        .AddField("Адрес", string.IsNullOrWhiteSpace(server.PublicAddress) ? "Не указан" : server.PublicAddress, true)
+        .WithDescription(Safe(Limit(error, 1000), "Сервер временно недоступен или выключен."))
+        .AddField("Адрес", Safe(server.PublicAddress, "Не указан"), true)
         .WithColor(new DiscordColor(231, 76, 60))
         .WithFooter($"{server.DisplayName} | Bridge API не отвечает")
         .WithTimestamp(DateTimeOffset.UtcNow)
         .Build();
+
+    public static string Safe(string? value, string fallback = "—")
+    {
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+    }
 
     public static string Limit(string value, int maximum)
     {

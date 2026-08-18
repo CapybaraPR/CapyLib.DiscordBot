@@ -300,3 +300,147 @@ internal sealed class LinkRoleSyncResponse
     [JsonPropertyName("received")]
     public int Received { get; set; }
 }
+
+internal sealed class StaffMemberDto
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("nickname")]
+    public string Nickname { get; set; } = string.Empty;
+
+    [JsonPropertyName("discord_user_id")]
+    public ulong DiscordUserId { get; set; }
+
+    [JsonPropertyName("discord_user_name")]
+    public string DiscordUserName { get; set; } = string.Empty;
+
+    [JsonPropertyName("group")]
+    public string Group { get; set; } = string.Empty;
+
+    [JsonPropertyName("server_scope")]
+    public string ServerScope { get; set; } = "all";
+
+    [JsonPropertyName("is_active")]
+    public bool IsActive { get; set; } = true;
+
+    [JsonPropertyName("assigned_by_discord_id")]
+    public ulong AssignedByDiscordId { get; set; }
+
+    [JsonPropertyName("assigned_by_discord_name")]
+    public string AssignedByDiscordName { get; set; } = string.Empty;
+
+    [JsonPropertyName("assigned_at_utc")]
+    public DateTime AssignedAtUtc { get; set; }
+
+    [JsonPropertyName("total_playtime_seconds")]
+    public long TotalPlaytimeSeconds { get; set; }
+
+    [JsonPropertyName("weekly_playtime_seconds")]
+    public long WeeklyPlaytimeSeconds { get; set; }
+
+    [JsonPropertyName("duty_playtime_seconds")]
+    public long DutyPlaytimeSeconds { get; set; }
+
+    [JsonPropertyName("bans_count")]
+    public int BansCount { get; set; }
+
+    [JsonPropertyName("mutes_count")]
+    public int MutesCount { get; set; }
+
+    [JsonPropertyName("kicks_count")]
+    public int KicksCount { get; set; }
+
+    [JsonPropertyName("first_seen_utc")]
+    public DateTime FirstSeenUtc { get; set; }
+
+    [JsonPropertyName("last_seen_utc")]
+    public DateTime LastSeenUtc { get; set; }
+
+    [JsonPropertyName("history")]
+    public List<StaffHistoryEntryDto> History { get; set; } = new();
+}
+
+internal sealed class StaffHistoryEntryDto
+{
+    [JsonPropertyName("timestamp_utc")]
+    public DateTime TimestampUtc { get; set; }
+
+    [JsonPropertyName("action")]
+    public string Action { get; set; } = string.Empty;
+
+    [JsonPropertyName("old_group")]
+    public string OldGroup { get; set; } = string.Empty;
+
+    [JsonPropertyName("new_group")]
+    public string NewGroup { get; set; } = string.Empty;
+
+    [JsonPropertyName("actor_discord_id")]
+    public ulong ActorDiscordId { get; set; }
+
+    [JsonPropertyName("actor_discord_name")]
+    public string ActorDiscordName { get; set; } = string.Empty;
+
+    [JsonPropertyName("reason")]
+    public string Reason { get; set; } = string.Empty;
+}
+
+internal sealed class StaffListResponse
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+
+    [JsonPropertyName("staff")]
+    public List<StaffMemberDto> Staff { get; set; } = new();
+}
+
+internal sealed class StaffMemberResponse
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+
+    [JsonPropertyName("member")]
+    public StaffMemberDto? Member { get; set; }
+}
+
+internal sealed class StaffAddRequest
+{
+    [JsonPropertyName("user_id")]
+    public string UserId { get; set; } = string.Empty;
+
+    [JsonPropertyName("discord_user_id")]
+    public ulong DiscordUserId { get; set; }
+
+    [JsonPropertyName("discord_user_name")]
+    public string DiscordUserName { get; set; } = string.Empty;
+
+    [JsonPropertyName("group")]
+    public string Group { get; set; } = string.Empty;
+
+    [JsonPropertyName("server_scope")]
+    public string ServerScope { get; set; } = "all";
+
+    [JsonPropertyName("actor_discord_id")]
+    public ulong ActorDiscordId { get; set; }
+
+    [JsonPropertyName("actor_discord_name")]
+    public string ActorDiscordName { get; set; } = string.Empty;
+
+    [JsonPropertyName("reason")]
+    public string Reason { get; set; } = string.Empty;
+}
+
+internal sealed class StaffRemoveRequest
+{
+    [JsonPropertyName("user_id")]
+    public string UserId { get; set; } = string.Empty;
+
+    [JsonPropertyName("actor_discord_id")]
+    public ulong ActorDiscordId { get; set; }
+
+    [JsonPropertyName("actor_discord_name")]
+    public string ActorDiscordName { get; set; } = string.Empty;
+
+    [JsonPropertyName("reason")]
+    public string Reason { get; set; } = string.Empty;
+}

@@ -529,3 +529,70 @@ internal sealed class OnlinePlayerAutocompleteProvider : IAutocompleteProvider
         return choices;
     }
 }
+
+internal sealed class StaffMemberAutocompleteProvider : IAutocompleteProvider
+{
+    public async Task<IEnumerable<DiscordAutoCompleteChoice>> Provider(AutocompleteContext ctx)
+    {
+        BotRuntime runtime = BotRuntime.Current;
+        var choices = new List<DiscordAutoCompleteChoice>();
+
+        string? serverId = ctx.Options.FirstOrDefault(o => o.Name == "server")?.Value?.ToString();
+        var serversToQuery = new List<ServerRuntime>();
+
+        if (!string.IsNullOrWhiteSpace(serverId) && runtime.TryGetServer(serverId, out ServerRuntime? server) && server != null)
+        {
+            serversToQuery.Add(server);
+        }
+        else
+        {
+            serversToQuery.AddRange(runtime.Servers);
+        }
+
+        var staffList = new List<StaffMemberDto>();
+        foreach (ServerRuntime s in serversToQuery)
+        {
+            try
+            {
+                StaffListResponse resp = await s.Api.GetStaffListAsync(CancellationToken.None).ConfigureAwait(false);
+                if (resp.Staff != null)
+                {
+                    foreach (StaffMemberDto st in resp.Staff)
+                    {
+                        if (!staffList.Any(x => x.Id.Equals(st.Id, StringComparison.OrdinalIgnoreCase)))
+                            staffList.Add(st);
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        string focusedValue = (ctx.FocusedOption?.Value?.ToString() ?? string.Empty).Trim();
+
+        IEnumerable<StaffMemberDto> filtered = staffList;
+        if (!string.IsNullOrWhiteSpace(focusedValue))
+        {
+            filtered = filtered.Where(s =>
+                s.Id.Contains(focusedValue, StringComparison.OrdinalIgnoreCase) ||
+                (!string.IsNullOrEmpty(s.Nickname) && s.Nickname.Contains(focusedValue, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(s.Group) && s.Group.Contains(focusedValue, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(s.DiscordUserName) && s.DiscordUserName.Contains(focusedValue, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        foreach (StaffMemberDto s in filtered.Take(25))
+        {
+            string name = !string.IsNullOrWhiteSpace(s.Nickname) ? s.Nickname : (!string.IsNullOrWhiteSpace(s.DiscordUserName) ? s.DiscordUserName : s.Id);
+            string label = DiscordPresentation.Limit($"[{s.Group}] {name} ({s.Id})", 95);
+            choices.Add(new DiscordAutoCompleteChoice(label, s.Id));
+        }
+
+        if (choices.Count == 0 && staffList.Count == 0)
+        {
+            choices.Add(new DiscordAutoCompleteChoice("В реестре стаффа пока нет записей", "none"));
+        }
+
+        return choices;
+    }
+}

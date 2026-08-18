@@ -379,6 +379,17 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         if (adminSb.Length > 0)
             embed.AddField("⚡ Управление и модерация", adminSb.ToString().TrimEnd(), false);
 
+        if (canSetGroup)
+        {
+            var staffSb = new StringBuilder();
+            staffSb.AppendLine("` /staff_profile ` `server: <NR/MRP>` `player: <выбор>`\n└ *Личное дело, стаж, онлайн за неделю и счётчики наказаний.*\n");
+            staffSb.AppendLine("` /staff_list ` `server: <NR/MRP>`\n└ *Полный список действующего состава администрации по рангам.*\n");
+            staffSb.AppendLine("` /staff_stats ` `server: <NR/MRP>` `period: <week/all>`\n└ *Рейтинг активности и проверка нормы онлайна стаффа.*\n");
+            staffSb.AppendLine("` /staff_add ` `server: <NR/MRP>` `player: <ID>` `group: <ранг>` `scope: <ALL/локально>`\n└ *Назначить администратора в постоянную базу данных.*\n");
+            staffSb.AppendLine("` /staff_remove ` `server: <NR/MRP>` `player: <выбор>`\n└ *Снять администратора из состава и отозвать права.*");
+            embed.AddField("👑 Управление персоналом (Staff Registry)", staffSb.ToString().TrimEnd(), false);
+        }
+
         embed.WithFooter("Капибара SCP:SL • Доступ определяется ролями Discord")
              .WithTimestamp(DateTimeOffset.UtcNow);
 

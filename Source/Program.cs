@@ -55,6 +55,7 @@ internal static class Program
 
             SlashCommandsExtension slash = discord.UseSlashCommands();
             slash.RegisterCommands<BotSlashCommands>(config.GuildId);
+            slash.RegisterCommands<BotStaffCommands>(config.GuildId);
             var roleSync = new DiscordRoleSyncService(discord, runtime);
 
             await discord.ConnectAsync().ConfigureAwait(false);

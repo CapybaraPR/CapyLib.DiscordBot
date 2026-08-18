@@ -51,6 +51,19 @@ internal sealed class BridgeApiClient : IDisposable
         CancellationToken cancellationToken) =>
         PostAsync<LinkRoleSyncRequest, LinkRoleSyncResponse>("v1/links/sync", request, cancellationToken);
 
+    public Task<StaffListResponse> GetStaffListAsync(CancellationToken cancellationToken) =>
+        GetAsync<StaffListResponse>("v1/staff", cancellationToken);
+
+    public Task<StaffMemberResponse> AddStaffAsync(
+        StaffAddRequest request,
+        CancellationToken cancellationToken) =>
+        PostAsync<StaffAddRequest, StaffMemberResponse>("v1/staff/add", request, cancellationToken);
+
+    public Task<CommandResponse> RemoveStaffAsync(
+        StaffRemoveRequest request,
+        CancellationToken cancellationToken) =>
+        PostAsync<StaffRemoveRequest, CommandResponse>("v1/staff/remove", request, cancellationToken);
+
     public Task<LogEventBatchResponse> GetLogsAsync(long afterId, int limit, CancellationToken cancellationToken)
     {
         string path = $"v1/logs?after_id={Uri.EscapeDataString(afterId.ToString(CultureInfo.InvariantCulture))}&limit={limit.ToString(CultureInfo.InvariantCulture)}";

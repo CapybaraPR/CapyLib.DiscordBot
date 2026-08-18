@@ -60,8 +60,8 @@ internal sealed class BotConfig
     [JsonPropertyName("management_role_ids")]
     public List<ulong> ManagementRoleIds { get; set; } = new();
 
-    [JsonPropertyName("creator_key_role_ids")]
-    public List<ulong> CreatorKeyRoleIds { get; set; } = new();
+    [JsonPropertyName("roles_permissions")]
+    public List<RolePermissionConfig> RolesPermissions { get; set; } = new();
 
     [JsonPropertyName("log_channels")]
     public LogChannelsConfig LogChannels { get; set; } = new();
@@ -201,6 +201,9 @@ internal sealed class ServerConfig
     [JsonPropertyName("creator_key_role_ids")]
     public List<ulong> CreatorKeyRoleIds { get; set; } = new();
 
+    [JsonPropertyName("roles_permissions")]
+    public List<RolePermissionConfig> RolesPermissions { get; set; } = new();
+
     [JsonPropertyName("log_channels")]
     public LogChannelsConfig LogChannels { get; set; } = new();
 
@@ -238,10 +241,49 @@ internal sealed class ServerConfig
         RaRoleIds = NormalizeIds(RaRoleIds);
         ManagementRoleIds = NormalizeIds(ManagementRoleIds);
         CreatorKeyRoleIds = NormalizeIds(CreatorKeyRoleIds);
-        if (RaRoleIds.Count == 0)
-            errors.Add($"{scope}.ra_role_ids не содержит ни одной общей административной роли");
-        if (CreatorKeyRoleIds.Count == 0)
-            errors.Add($"{scope}.creator_key_role_ids не содержит ни одной роли Ключ Создателя");
+
+        RolesPermissions ??= new List<RolePermissionConfig>();
+        foreach (RolePermissionConfig role in RolesPermissions)
+            role.Normalize();
+
+        if (RolesPermissions.Count == 0)
+        {
+            if (RaRoleIds.Count > 0)
+            {
+                RolesPermissions.Add(new RolePermissionConfig
+                {
+                    Id = "ra",
+                    DisplayName = "Администрация (RA)",
+                    DiscordRoleIds = RaRoleIds.ToList(),
+                    Inherits = new List<string>(),
+                    AllowedCommands = new List<string> { "server", "linksteam", "players", "console", "ban", "kick" }
+                });
+            }
+
+            if (ManagementRoleIds.Count > 0)
+            {
+                RolesPermissions.Add(new RolePermissionConfig
+                {
+                    Id = "management",
+                    DisplayName = "Руководство",
+                    DiscordRoleIds = ManagementRoleIds.ToList(),
+                    Inherits = new List<string> { "ra" },
+                    AllowedCommands = new List<string> { "listranked" }
+                });
+            }
+
+            if (CreatorKeyRoleIds.Count > 0)
+            {
+                RolesPermissions.Add(new RolePermissionConfig
+                {
+                    Id = "creator",
+                    DisplayName = "Ключ Создателя",
+                    DiscordRoleIds = CreatorKeyRoleIds.ToList(),
+                    Inherits = ManagementRoleIds.Count > 0 ? new List<string> { "management" } : new List<string> { "ra" },
+                    AllowedCommands = new List<string> { "*" }
+                });
+            }
+        }
 
         LogChannels ??= new LogChannelsConfig();
         LogChannels.NormalizeAndValidate(errors, scope + ".log_channels");
@@ -249,6 +291,43 @@ internal sealed class ServerConfig
 
     private static List<ulong> NormalizeIds(IEnumerable<ulong>? ids) =>
         (ids ?? Array.Empty<ulong>()).Where(id => id != 0).Distinct().ToList();
+}
+
+internal sealed class RolePermissionConfig
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("display_name")]
+    public string DisplayName { get; set; } = string.Empty;
+
+    [JsonPropertyName("discord_role_ids")]
+    public List<ulong> DiscordRoleIds { get; set; } = new();
+
+    [JsonPropertyName("inherits")]
+    public List<string> Inherits { get; set; } = new();
+
+    [JsonPropertyName("allowed_commands")]
+    public List<string> AllowedCommands { get; set; } = new();
+
+    public void Normalize()
+    {
+        Id = (Id ?? string.Empty).Trim().ToLowerInvariant();
+        DisplayName = (DisplayName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(DisplayName))
+            DisplayName = Id;
+        DiscordRoleIds = (DiscordRoleIds ?? new List<ulong>()).Where(r => r != 0).Distinct().ToList();
+        Inherits = (Inherits ?? new List<string>())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim().ToLowerInvariant())
+            .Distinct()
+            .ToList();
+        AllowedCommands = (AllowedCommands ?? new List<string>())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim().ToLowerInvariant().TrimStart('/'))
+            .Distinct()
+            .ToList();
+    }
 }
 
 internal sealed class LogChannelsConfig

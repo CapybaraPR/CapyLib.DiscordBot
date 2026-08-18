@@ -41,8 +41,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         if (server == null)
             return;
 
-        BotAccessLevel access = AccessResolver.GetAccess(context.Member, server.Config);
-        if (access < BotAccessLevel.Ra)
+        if (!AccessResolver.CanExecute(context.Member, server.Config, "players"))
         {
             await DenyAsync(context, server.Config).ConfigureAwait(false);
             return;
@@ -81,8 +80,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         if (server == null)
             return;
 
-        BotAccessLevel access = AccessResolver.GetAccess(context.Member, server.Config);
-        if (access < BotAccessLevel.Management)
+        if (!AccessResolver.CanExecute(context.Member, server.Config, "listranked"))
         {
             await DenyAsync(context, server.Config).ConfigureAwait(false);
             return;
@@ -122,7 +120,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
                 .WithDescription(desc)
                 .WithColor(new DiscordColor(241, 196, 15))
                 .AddField("Сервер", $"{server.Config.DisplayName} ({online}/{maximum})", true)
-                .WithFooter("Доступ: Руководство")
+                .WithFooter($"Доступ: {AccessResolver.GetHighestRoleDisplayName(context.Member, server.Config)}")
                 .WithTimestamp(DateTimeOffset.UtcNow)
                 .Build();
 
@@ -149,7 +147,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             return;
 
         BotAccessLevel access = AccessResolver.GetAccess(context.Member, server.Config);
-        if (access < BotAccessLevel.Ra)
+        if (!AccessResolver.CanExecute(context.Member, server.Config, "console"))
         {
             await DenyAsync(context, server.Config).ConfigureAwait(false);
             await SendAuditAsync(context, server.Config, command, access, false, "Нет требуемого набора Discord-ролей.")
@@ -177,7 +175,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             return;
 
         BotAccessLevel access = AccessResolver.GetAccess(context.Member, server.Config);
-        if (access < BotAccessLevel.Ra)
+        if (!AccessResolver.CanExecute(context.Member, server.Config, "ban"))
         {
             await DenyAsync(context, server.Config).ConfigureAwait(false);
             await SendAuditAsync(context, server.Config, $"ban {player} {duration} {reason}", access, false, "Нет требуемого набора Discord-ролей.")
@@ -205,7 +203,7 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             return;
 
         BotAccessLevel access = AccessResolver.GetAccess(context.Member, server.Config);
-        if (access < BotAccessLevel.Ra)
+        if (!AccessResolver.CanExecute(context.Member, server.Config, "kick"))
         {
             await DenyAsync(context, server.Config).ConfigureAwait(false);
             await SendAuditAsync(context, server.Config, $"kick {player} {reason}", access, false, "Нет требуемого набора Discord-ролей.")
@@ -234,12 +232,12 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             return;
 
         BotAccessLevel access = AccessResolver.GetAccess(context.Member, server.Config);
-        if (access < BotAccessLevel.Creator)
+        if (!AccessResolver.CanExecute(context.Member, server.Config, "setgroup"))
         {
             await context.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
-                $"Недостаточно прав для {server.Config.DisplayName}. Выдача групп разрешена только обладателям роли Ключа Создателя."))
+                $"Недостаточно прав для {server.Config.DisplayName}. Выдача групп не разрешена вашей роли."))
                 .ConfigureAwait(false);
-            await SendAuditAsync(context, server.Config, $"pm setgroup {player} {group}", access, false, "Требуется роль Ключа Создателя.")
+            await SendAuditAsync(context, server.Config, $"pm setgroup {player} {group}", access, false, "Недостаточно прав для команды setgroup.")
                 .ConfigureAwait(false);
             return;
         }
@@ -318,24 +316,44 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         string access = string.Join(
             "\n",
             runtime.Servers.Select(server =>
-                $"**{server.Config.DisplayName}:** {AccessResolver.GetAccess(context.Member, server.Config).DisplayName()}"));
+                $"**{server.Config.DisplayName}:** {AccessResolver.GetHighestRoleDisplayName(context.Member, server.Config)}"));
+
         var embed = new DiscordEmbedBuilder()
-            .WithTitle("Aspect Discord Bot")
+            .WithTitle("CapyLib Discord Bot — Доступные команды")
             .WithDescription(access)
             .AddField("/server server:<NR/MRP>", "Состояние, онлайн и адрес выбранного сервера.")
-            .AddField("/linksteam server:<NR/MRP>", "Получить код привязки для выбранного сервера.")
-            .AddField("/players server:<NR/MRP>", "Список игроков. Требуется серверная роль и RA.")
-            .AddField("/listranked server:<NR/MRP>", "Список игроков с рангами на сервере (Руководство).")
-            .AddField("/console server:<NR/MRP> text:<команда>", "Выполнить произвольную команду на сервере.")
-            .AddField("/ban server:<NR/MRP> player:<ID> duration:<время> reason:<причина>", "Забанить игрока на сервере.")
-            .AddField("/kick server:<NR/MRP> player:<ID> reason:<причина>", "Кикнуть игрока с сервера.")
-            .AddField("/setgroup server:<NR/MRP> player:<ID> group:<выбор>", "Установить или снять группу игрока (Ключ Создателя).")
-            .WithColor(new DiscordColor(149, 165, 166))
-            .Build();
+            .AddField("/linksteam server:<NR/MRP>", "Получить код привязки для выбранного сервера.");
+
+        bool canPlayers = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "players"));
+        if (canPlayers)
+            embed.AddField("/players server:<NR/MRP>", "Список игроков онлайн на выбранном сервере.");
+
+        bool canListRanked = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "listranked"));
+        if (canListRanked)
+            embed.AddField("/listranked server:<NR/MRP>", "Список игроков с рангами (Руководство).");
+
+        bool canConsole = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "console"));
+        if (canConsole)
+            embed.AddField("/console server:<NR/MRP> text:<команда>", "Выполнить произвольную команду на сервере.");
+
+        bool canBan = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "ban"));
+        if (canBan)
+            embed.AddField("/ban server:<NR/MRP> player:<ID> duration:<время> reason:<причина>", "Забанить игрока на сервере.");
+
+        bool canKick = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "kick"));
+        if (canKick)
+            embed.AddField("/kick server:<NR/MRP> player:<ID> reason:<причина>", "Кикнуть игрока с сервера.");
+
+        bool canSetGroup = runtime.Servers.Any(s => AccessResolver.CanExecute(context.Member, s.Config, "setgroup"));
+        if (canSetGroup)
+            embed.AddField("/setgroup server:<NR/MRP> player:<ID> group:<выбор>", "Установить или снять группу игрока.");
+
+        embed.WithColor(new DiscordColor(149, 165, 166));
+
         await context.CreateResponseAsync(
             InteractionResponseType.ChannelMessageWithSource,
             new DiscordInteractionResponseBuilder()
-                .AddEmbed(embed)
+                .AddEmbed(embed.Build())
                 .AsEphemeral(runtime.Config.EphemeralCommandResponses)).ConfigureAwait(false);
     }
 

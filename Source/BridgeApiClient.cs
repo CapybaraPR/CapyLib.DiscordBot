@@ -20,7 +20,7 @@ internal sealed class BridgeApiClient : IDisposable
         _http = new HttpClient
         {
             BaseAddress = new Uri(config.ApiBaseUrl),
-            Timeout = TimeSpan.FromSeconds(10)
+            Timeout = TimeSpan.FromSeconds(20)
         };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("AspectDiscordBot/2.0");
         _signer = new BridgeRequestSigner(config);

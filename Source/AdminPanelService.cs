@@ -44,7 +44,7 @@ internal sealed class AdminPanelService
         PlayersResponse? onlinePlayers = null;
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
         }
@@ -54,7 +54,7 @@ internal sealed class AdminPanelService
 
         try
         {
-            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             onlinePlayers = await server.Api.GetPlayersAsync(pCts.Token).ConfigureAwait(false);
         }
         catch
@@ -150,7 +150,7 @@ internal sealed class AdminPanelService
         PlayersResponse? onlinePlayers = null;
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
         }
@@ -166,7 +166,7 @@ internal sealed class AdminPanelService
 
         try
         {
-            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             onlinePlayers = await server.Api.GetPlayersAsync(pCts.Token).ConfigureAwait(false);
         }
         catch
@@ -229,7 +229,7 @@ internal sealed class AdminPanelService
         PlayersResponse? onlinePlayers = null;
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
         }
@@ -245,7 +245,7 @@ internal sealed class AdminPanelService
 
         try
         {
-            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             onlinePlayers = await server.Api.GetPlayersAsync(pCts.Token).ConfigureAwait(false);
         }
         catch
@@ -318,7 +318,7 @@ internal sealed class AdminPanelService
         PlayersResponse? onlinePlayers = null;
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
         }
@@ -334,7 +334,7 @@ internal sealed class AdminPanelService
 
         try
         {
-            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             onlinePlayers = await server.Api.GetPlayersAsync(pCts.Token).ConfigureAwait(false);
         }
         catch
@@ -559,7 +559,7 @@ internal sealed class AdminPanelService
         List<StaffMemberDto> staffList = new();
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
         }
@@ -838,7 +838,7 @@ internal sealed class AdminPanelService
                 Reason = reason
             };
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             StaffMemberResponse addResp = await server.Api.AddStaffAsync(req, cts.Token).ConfigureAwait(false);
 
             var successEmbed = new DiscordEmbedBuilder()
@@ -888,7 +888,7 @@ internal sealed class AdminPanelService
                 Reason = "Снятие с должности через Admin Panel"
             };
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             CommandResponse remResp = await server.Api.RemoveStaffAsync(req, cts.Token).ConfigureAwait(false);
 
             string cleanId = CleanUserId(targetUserId);

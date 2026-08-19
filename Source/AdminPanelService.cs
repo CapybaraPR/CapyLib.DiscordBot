@@ -349,7 +349,7 @@ internal sealed class AdminPanelService
         return builder;
     }
 
-    public Task<DiscordMessageBuilder> BuildAddRoleSelectMessageAsync(string serverId)
+    public Task<DiscordMessageBuilder> BuildAddScopeSelectMessageAsync(string serverId)
     {
         if (!_runtime.TryGetServer(serverId, out ServerRuntime? server) || server == null)
             server = _runtime.Servers.FirstOrDefault();
@@ -357,7 +357,76 @@ internal sealed class AdminPanelService
         if (server == null)
             return Task.FromResult(new DiscordMessageBuilder().WithContent("Сервер не найден."));
 
-        // Only assignable roles, STRICTLY EXCLUDING ruk.*
+        var embed = new DiscordEmbedBuilder()
+            .WithTitle("➕ НАЗНАЧЕНИЕ СОТРУДНИКА • ШАГ 1: ВЫБОР СЕРВЕРА")
+            .WithDescription(
+                "Выберите область действия привилегии из выпадающего списка:\n\n" +
+                "• **🌐 Все серверы проекта (ALL)** — назначить на всю сеть серверов.\n" +
+                "• **🔴 Капибара | NoRules (NR)** — права только на сервере NoRules.\n" +
+                "• **🔵 Капибара | MediumRP (MRP)** — права только на сервере MediumRP.")
+            .WithColor(new DiscordColor(46, 204, 113))
+            .WithFooter("Капибара SCP:SL • Выбор области действия")
+            .WithTimestamp(DateTimeOffset.UtcNow);
+
+        var options = new List<DiscordSelectComponentOption>
+        {
+            new DiscordSelectComponentOption(
+                "🌐 Все серверы проекта (ALL)",
+                "all",
+                "Привилегия действует на серверах NR и MRP",
+                false,
+                new DiscordComponentEmoji("🌐")),
+            new DiscordSelectComponentOption(
+                "🔴 Капибара | NoRules (NR)",
+                "nr",
+                "Привилегия действует только на сервере NoRules (7777)",
+                false,
+                new DiscordComponentEmoji("🔴")),
+            new DiscordSelectComponentOption(
+                "🔵 Капибара | MediumRP (MRP)",
+                "mrp",
+                "Привилегия действует только на сервере MediumRP (7778)",
+                false,
+                new DiscordComponentEmoji("🔵"))
+        };
+
+        var select = new DiscordSelectComponent(
+            $"ap_add_pick_scope:{server.Config.Id}",
+            "🌐 Выберите сервер назначения (ALL / NR / MRP)...",
+            options,
+            false,
+            1,
+            1);
+
+        var builder = new DiscordMessageBuilder()
+            .AddEmbed(embed.Build())
+            .AddComponents(select);
+
+        var row = new List<DiscordComponent>
+        {
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Отмена / Назад", false, new DiscordComponentEmoji("◀️"))
+        };
+        builder.AddComponents(row);
+
+        return Task.FromResult(builder);
+    }
+
+    public Task<DiscordMessageBuilder> BuildAddRoleSelectMessageAsync(string serverId, string scope)
+    {
+        if (!_runtime.TryGetServer(serverId, out ServerRuntime? server) || server == null)
+            server = _runtime.Servers.FirstOrDefault();
+
+        if (server == null)
+            return Task.FromResult(new DiscordMessageBuilder().WithContent("Сервер не найден."));
+
+        string scopeDisplayName = scope switch
+        {
+            "nr" => "🔴 Только NoRules (NR)",
+            "mrp" => "🔵 Только MediumRP (MRP)",
+            _ => "🌐 Все серверы проекта (ALL)"
+        };
+
+        // Assignable staff groups ONLY: Administration and Events and Builders (NO ruk.*, NO vip.*)
         var assignable = new List<(string group, string title, string tag, string emoji)>
         {
             // Administration
@@ -378,20 +447,15 @@ internal sealed class AdminPanelService
             ("build.curator", "Куратор строителей", "Строители", "🔨"),
             ("build.senior", "Старший строитель", "Строители", "🔨"),
             ("build.builder", "Строитель", "Строители", "🔨"),
-            ("build.trainee", "Стажёр строитель", "Строители", "🔨"),
-
-            // VIP / Media
-            ("vip.legend", "Легенда", "VIP / Медиа", "⭐"),
-            ("vip.media", "Медиа", "VIP / Медиа", "⭐"),
-            ("vip.vip", "VIP", "VIP / Медиа", "⭐")
+            ("build.trainee", "Стажёр строитель", "Строители", "🔨")
         };
 
         var embed = new DiscordEmbedBuilder()
-            .WithTitle($"➕ НАЗНАЧЕНИЕ СОТРУДНИКА • ВЫБОР ДОЛЖНОСТИ")
+            .WithTitle($"➕ НАЗНАЧЕНИЕ СОТРУДНИКА • ШАГ 2: ВЫБОР ДОЛЖНОСТИ")
             .WithDescription(
-                "**Шаг 1 из 2:** Выберите желаемую должность из выпадающего списка ниже.\n\n" +
-                "🔒 **Безопасность:** Должности высшего руководства (`ruk.*`) выдавать через бота запрещено.\n" +
-                "💡 Вы можете воспользоваться поиском в списке по названию или тегу (`adm`, `event`, `build`, `vip`).")
+                $"**Выбранная область:** {scopeDisplayName}\n\n" +
+                "Выберите должность из выпадающего списка ниже. После выбора откроется окно ввода SteamID64.\n\n" +
+                "🔒 *Должности руководства (`ruk.*`) и донат-группы (`vip.*`) исключены из меню выдачи.*")
             .WithColor(new DiscordColor(46, 204, 113))
             .WithFooter("Капибара SCP:SL • Назначение персонала")
             .WithTimestamp(DateTimeOffset.UtcNow);
@@ -402,13 +466,13 @@ internal sealed class AdminPanelService
             options.Add(new DiscordSelectComponentOption(
                 $"{r.title} ({r.group})",
                 r.group,
-                $"Тег: {r.tag} | Ранг: {r.group}",
+                $"Отдел: {r.tag} | Ранг: {r.group}",
                 false,
                 new DiscordComponentEmoji(r.emoji)));
         }
 
         var select = new DiscordSelectComponent(
-            $"ap_add_pick_group:{server.Config.Id}",
+            $"ap_add_pick_group:{server.Config.Id}:{scope}",
             "🏷️ Выберите должность для назначения...",
             options,
             false,
@@ -421,7 +485,8 @@ internal sealed class AdminPanelService
 
         var row = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Отмена / Назад", false, new DiscordComponentEmoji("◀️"))
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_add_flow:{server.Config.Id}", "◀️ Назад к выбору сервера", false, new DiscordComponentEmoji("◀️")),
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "❌ Отмена", false, new DiscordComponentEmoji("❌"))
         };
         builder.AddComponents(row);
 
@@ -566,7 +631,17 @@ internal sealed class AdminPanelService
 
                 case "ap_add_flow":
                 {
-                    DiscordMessageBuilder msg = await BuildAddRoleSelectMessageAsync(serverId).ConfigureAwait(false);
+                    DiscordMessageBuilder msg = await BuildAddScopeSelectMessageAsync(serverId).ConfigureAwait(false);
+                    await e.Interaction.CreateResponseAsync(
+                        InteractionResponseType.UpdateMessage,
+                        new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
+                    break;
+                }
+
+                case "ap_add_pick_scope":
+                {
+                    string selectedScope = e.Values.FirstOrDefault() ?? "all";
+                    DiscordMessageBuilder msg = await BuildAddRoleSelectMessageAsync(serverId, selectedScope).ConfigureAwait(false);
                     await e.Interaction.CreateResponseAsync(
                         InteractionResponseType.UpdateMessage,
                         new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
@@ -575,24 +650,30 @@ internal sealed class AdminPanelService
 
                 case "ap_add_pick_group":
                 {
+                    string scope = parts.Length > 2 ? parts[2] : "all";
                     string chosenGroup = e.Values.FirstOrDefault() ?? string.Empty;
                     if (string.IsNullOrEmpty(chosenGroup))
                         return;
 
-                    // Block ruk.*
-                    if (chosenGroup.StartsWith("ruk.", StringComparison.OrdinalIgnoreCase) || chosenGroup.Equals("owner", StringComparison.OrdinalIgnoreCase) || chosenGroup.Equals("creator", StringComparison.OrdinalIgnoreCase))
+                    // Block ruk.* and vip.*
+                    if (chosenGroup.StartsWith("ruk.", StringComparison.OrdinalIgnoreCase) ||
+                        chosenGroup.StartsWith("vip.", StringComparison.OrdinalIgnoreCase) ||
+                        chosenGroup.Equals("owner", StringComparison.OrdinalIgnoreCase) ||
+                        chosenGroup.Equals("creator", StringComparison.OrdinalIgnoreCase))
                     {
                         await e.Interaction.CreateResponseAsync(
                             InteractionResponseType.ChannelMessageWithSource,
-                            new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 Назначение ролей руководства (`ruk.*`) через бота строго запрещено."))
+                            new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 Назначение этой роли через бота заблокировано."))
                             .ConfigureAwait(false);
                         return;
                     }
 
+                    string scopeName = scope switch { "nr" => "NR", "mrp" => "MRP", _ => "ALL" };
+
                     // Open clean modal with SteamID64
                     var modal = new DiscordInteractionResponseBuilder()
-                        .WithTitle($"Назначение: {chosenGroup}")
-                        .WithCustomId($"ap_modal_add_submit:{server.Config.Id}:{chosenGroup}")
+                        .WithTitle($"Назначение: {chosenGroup} [{scopeName}]")
+                        .WithCustomId($"ap_modal_add_submit:{server.Config.Id}:{scope}:{chosenGroup}")
                         .AddComponents(new TextInputComponent(
                             "SteamID64 администратора",
                             "input_steamid",
@@ -659,7 +740,8 @@ internal sealed class AdminPanelService
 
         string[] parts = id.Split(':');
         string serverId = parts.Length > 1 ? parts[1] : "nr";
-        string group = parts.Length > 2 ? parts[2] : string.Empty;
+        string scope = parts.Length > 2 ? parts[2] : "all";
+        string group = parts.Length > 3 ? parts[3] : string.Empty;
 
         if (!_runtime.TryGetServer(serverId, out ServerRuntime? server) || server == null)
             server = _runtime.Servers.FirstOrDefault();
@@ -677,12 +759,15 @@ internal sealed class AdminPanelService
             return;
         }
 
-        // Security block on ruk.*
-        if (group.StartsWith("ruk.", StringComparison.OrdinalIgnoreCase) || group.Equals("owner", StringComparison.OrdinalIgnoreCase) || group.Equals("creator", StringComparison.OrdinalIgnoreCase))
+        // Security block on ruk.* & vip.*
+        if (group.StartsWith("ruk.", StringComparison.OrdinalIgnoreCase) ||
+            group.StartsWith("vip.", StringComparison.OrdinalIgnoreCase) ||
+            group.Equals("owner", StringComparison.OrdinalIgnoreCase) ||
+            group.Equals("creator", StringComparison.OrdinalIgnoreCase))
         {
             await e.Interaction.CreateResponseAsync(
                 InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 **Отказ безопасности:** Выдача высших ролей руководства (`ruk.*`) через бота заблокирована."))
+                new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 **Отказ безопасности:** Выдача этой роли через бота заблокирована."))
                 .ConfigureAwait(false);
             return;
         }
@@ -708,6 +793,14 @@ internal sealed class AdminPanelService
         if (!string.IsNullOrEmpty(discordStr))
             ulong.TryParse(discordStr.Replace("<@", "").Replace(">", "").Replace("!", "").Trim(), out discordId);
 
+        string targetScope = scope == "nr" ? "nr" : (scope == "mrp" ? "mrp" : "all");
+        string scopeDisplayName = targetScope switch
+        {
+            "nr" => "🔴 Только NoRules (NR)",
+            "mrp" => "🔵 Только MediumRP (MRP)",
+            _ => "🌐 Все серверы проекта (ALL)"
+        };
+
         try
         {
             var req = new StaffAddRequest
@@ -716,7 +809,7 @@ internal sealed class AdminPanelService
                 DiscordUserId = discordId,
                 DiscordUserName = string.Empty,
                 Group = group,
-                ServerScope = "all",
+                ServerScope = targetScope,
                 ActorDiscordId = e.Interaction.User.Id,
                 ActorDiscordName = e.Interaction.User.Username,
                 Reason = reason
@@ -731,7 +824,7 @@ internal sealed class AdminPanelService
                     $"• **Должность:** `{group}`\n" +
                     $"• **SteamID64:** `{cleanSteamId}`\n" +
                     $"• **Discord:** {(discordId != 0 ? $"<@{discordId}> (`{discordId}`)" : "*Не привязан*")}\n" +
-                    $"• **Область:** `Все серверы проекта (ALL)`\n" +
+                    $"• **Область действия:** `{scopeDisplayName}`\n" +
                     $"• **Основание:** *{reason}*")
                 .WithColor(new DiscordColor(46, 204, 113))
                 .WithFooter("Капибара SCP:SL • Реестр персонала")

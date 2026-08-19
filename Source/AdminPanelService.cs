@@ -85,17 +85,17 @@ internal sealed class AdminPanelService
         // Row 1: Quick navigation
         var row1 = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Primary, $"ap_list:{server.Config.Id}", "👥 Состав администрации", false, new DiscordComponentEmoji("👥")),
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_stats:{server.Config.Id}:week", "⏱️ Рейтинг нормы", false, new DiscordComponentEmoji("⏱️")),
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_refresh:{server.Config.Id}", "🔄 Обновить", false, new DiscordComponentEmoji("🔄"))
+            new DiscordButtonComponent(ButtonStyle.Primary, $"ap_list:{server.Config.Id}", "Состав администрации", false, new DiscordComponentEmoji("👥")),
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_stats:{server.Config.Id}:week", "Рейтинг нормы", false, new DiscordComponentEmoji("⏱️")),
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_refresh:{server.Config.Id}", "Обновить", false, new DiscordComponentEmoji("🔄"))
         };
         builder.AddComponents(row1);
 
         // Row 2: Management buttons
         var row2 = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Success, $"ap_add_flow:{server.Config.Id}", "➕ Назначить сотрудника", false, new DiscordComponentEmoji("➕")),
-            new DiscordButtonComponent(ButtonStyle.Danger, $"ap_remove_menu:{server.Config.Id}", "➖ Снять с должности", staffList.Count == 0, new DiscordComponentEmoji("➖"))
+            new DiscordButtonComponent(ButtonStyle.Success, $"ap_add_flow:{server.Config.Id}", "Назначить сотрудника", false, new DiscordComponentEmoji("➕")),
+            new DiscordButtonComponent(ButtonStyle.Danger, $"ap_remove_menu:{server.Config.Id}", "Снять с должности", staffList.Count == 0, new DiscordComponentEmoji("➖"))
         };
         builder.AddComponents(row2);
 
@@ -194,9 +194,9 @@ internal sealed class AdminPanelService
         var builder = new DiscordMessageBuilder().AddEmbed(embed.Build());
         var row = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Главное меню", false, new DiscordComponentEmoji("◀️")),
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_list:{server.Config.Id}", "🔄 Обновить список", false, new DiscordComponentEmoji("🔄")),
-            new DiscordButtonComponent(ButtonStyle.Success, $"ap_add_flow:{server.Config.Id}", "➕ Назначить", false, new DiscordComponentEmoji("➕"))
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "Главное меню", false, new DiscordComponentEmoji("◀️")),
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_list:{server.Config.Id}", "Обновить список", false, new DiscordComponentEmoji("🔄")),
+            new DiscordButtonComponent(ButtonStyle.Success, $"ap_add_flow:{server.Config.Id}", "Назначить", false, new DiscordComponentEmoji("➕"))
         };
         builder.AddComponents(row);
         return builder;
@@ -262,9 +262,9 @@ internal sealed class AdminPanelService
         var builder = new DiscordMessageBuilder().AddEmbed(embed.Build());
         var row = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Главное меню", false, new DiscordComponentEmoji("◀️")),
-            new DiscordButtonComponent(ButtonStyle.Primary, $"ap_stats:{server.Config.Id}:{(isWeek ? "all" : "week")}", isWeek ? "📅 Показать за всё время" : "📅 Показать за неделю", false, new DiscordComponentEmoji("📅")),
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_stats:{server.Config.Id}:{period}", "🔄 Обновить", false, new DiscordComponentEmoji("🔄"))
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "Главное меню", false, new DiscordComponentEmoji("◀️")),
+            new DiscordButtonComponent(ButtonStyle.Primary, $"ap_stats:{server.Config.Id}:{(isWeek ? "all" : "week")}", isWeek ? "Показать за всё время" : "Показать за неделю", false, new DiscordComponentEmoji("📅")),
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_stats:{server.Config.Id}:{period}", "Обновить", false, new DiscordComponentEmoji("🔄"))
         };
         builder.AddComponents(row);
         return builder;
@@ -342,8 +342,8 @@ internal sealed class AdminPanelService
         var builder = new DiscordMessageBuilder().AddEmbed(embed.Build());
         var row = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Главное меню", false, new DiscordComponentEmoji("◀️")),
-            new DiscordButtonComponent(ButtonStyle.Danger, $"ap_quick_remove:{server.Config.Id}:{st.Id}", "➖ Снять с должности", false, new DiscordComponentEmoji("➖"))
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "Главное меню", false, new DiscordComponentEmoji("◀️")),
+            new DiscordButtonComponent(ButtonStyle.Danger, $"ap_quick_remove:{server.Config.Id}:{st.Id}", "Снять с должности", false, new DiscordComponentEmoji("➖"))
         };
         builder.AddComponents(row);
         return builder;
@@ -404,7 +404,7 @@ internal sealed class AdminPanelService
 
         var row = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Отмена / Назад", false, new DiscordComponentEmoji("◀️"))
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "Отмена / Назад", false, new DiscordComponentEmoji("◀️"))
         };
         builder.AddComponents(row);
 
@@ -426,7 +426,7 @@ internal sealed class AdminPanelService
             _ => "🌐 Все серверы проекта (ALL)"
         };
 
-        // Assignable staff groups ONLY: Administration and Events and Builders (NO ruk.*, NO vip.*)
+        // Assignable staff groups ONLY: Administration, Events, Builders (NO ruk.*, NO vip.*)
         var assignable = new List<(string group, string title, string tag, string emoji)>
         {
             // Administration
@@ -485,8 +485,8 @@ internal sealed class AdminPanelService
 
         var row = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_add_flow:{server.Config.Id}", "◀️ Назад к выбору сервера", false, new DiscordComponentEmoji("◀️")),
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "❌ Отмена", false, new DiscordComponentEmoji("❌"))
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_add_flow:{server.Config.Id}", "Назад к выбору сервера", false, new DiscordComponentEmoji("◀️")),
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "Отмена", false, new DiscordComponentEmoji("❌"))
         };
         builder.AddComponents(row);
 
@@ -548,7 +548,7 @@ internal sealed class AdminPanelService
 
         var row = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Отмена / Назад", false, new DiscordComponentEmoji("◀️"))
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "Отмена / Назад", false, new DiscordComponentEmoji("◀️"))
         };
         builder.AddComponents(row);
         return builder;
@@ -833,8 +833,8 @@ internal sealed class AdminPanelService
             var builder = new DiscordMessageBuilder().AddEmbed(successEmbed.Build());
             var row = new List<DiscordComponent>
             {
-                new DiscordButtonComponent(ButtonStyle.Primary, $"ap_back:{server.Config.Id}", "◀️ Вернуться в панель", false, new DiscordComponentEmoji("◀️")),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_list:{server.Config.Id}", "👥 Показать состав", false, new DiscordComponentEmoji("👥"))
+                new DiscordButtonComponent(ButtonStyle.Primary, $"ap_back:{server.Config.Id}", "Вернуться в панель", false, new DiscordComponentEmoji("◀️")),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_list:{server.Config.Id}", "Показать состав", false, new DiscordComponentEmoji("👥"))
             };
             builder.AddComponents(row);
 
@@ -883,8 +883,8 @@ internal sealed class AdminPanelService
             var builder = new DiscordMessageBuilder().AddEmbed(confirmEmbed.Build());
             var row = new List<DiscordComponent>
             {
-                new DiscordButtonComponent(ButtonStyle.Primary, $"ap_back:{server.Config.Id}", "◀️ Вернуться в панель", false, new DiscordComponentEmoji("◀️")),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_list:{server.Config.Id}", "👥 Показать состав", false, new DiscordComponentEmoji("👥"))
+                new DiscordButtonComponent(ButtonStyle.Primary, $"ap_back:{server.Config.Id}", "Вернуться в панель", false, new DiscordComponentEmoji("◀️")),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_list:{server.Config.Id}", "Показать состав", false, new DiscordComponentEmoji("👥"))
             };
             builder.AddComponents(row);
 

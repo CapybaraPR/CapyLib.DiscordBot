@@ -613,145 +613,116 @@ internal sealed class AdminPanelService
 
         try
         {
+            // If the action is picking a group to open a modal, we MUST respond with Modal directly (cannot defer)
+            if (action == "ap_add_pick_group")
+            {
+                string scope = parts.Length > 2 ? parts[2] : "all";
+                string chosenGroup = e.Values.FirstOrDefault() ?? string.Empty;
+                if (string.IsNullOrEmpty(chosenGroup))
+                    return;
+
+                if (chosenGroup.StartsWith("ruk.", StringComparison.OrdinalIgnoreCase) ||
+                    chosenGroup.StartsWith("vip.", StringComparison.OrdinalIgnoreCase) ||
+                    chosenGroup.Equals("owner", StringComparison.OrdinalIgnoreCase) ||
+                    chosenGroup.Equals("creator", StringComparison.OrdinalIgnoreCase))
+                {
+                    await e.Interaction.CreateResponseAsync(
+                        InteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 Назначение этой роли через бота заблокировано."))
+                        .ConfigureAwait(false);
+                    return;
+                }
+
+                string scopeName = scope switch { "nr" => "NR", "mrp" => "MRP", _ => "ALL" };
+
+                var modal = new DiscordInteractionResponseBuilder()
+                    .WithTitle($"Назначение: {chosenGroup} [{scopeName}]")
+                    .WithCustomId($"ap_modal_add_submit:{server.Config.Id}:{scope}:{chosenGroup}")
+                    .AddComponents(new TextInputComponent(
+                        "SteamID64 администратора",
+                        "input_steamid",
+                        "Например: 76561198708583029 (17 цифр)",
+                        null,
+                        true,
+                        TextInputStyle.Short,
+                        17,
+                        25))
+                    .AddComponents(new TextInputComponent(
+                        "Discord ID пользователя (для привязки)",
+                        "input_discord",
+                        "1497881868127965264 (опционально)",
+                        null,
+                        false,
+                        TextInputStyle.Short))
+                    .AddComponents(new TextInputComponent(
+                        "Основание / Причина назначения",
+                        "input_reason",
+                        "Причина назначения в состав",
+                        "Назначение в состав",
+                        true,
+                        TextInputStyle.Paragraph));
+
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal).ConfigureAwait(false);
+                return;
+            }
+
+            // For all other button/menu actions, immediately ACK to prevent 3-second Discord timeouts
+            await e.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate).ConfigureAwait(false);
+
+            DiscordMessageBuilder? resultMsg = null;
             switch (action)
             {
                 case "ap_refresh":
                 case "ap_back":
-                {
-                    DiscordMessageBuilder msg = await BuildMainPanelMessageAsync(serverId, member).ConfigureAwait(false);
-                    await e.Interaction.CreateResponseAsync(
-                        InteractionResponseType.UpdateMessage,
-                        new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
+                    resultMsg = await BuildMainPanelMessageAsync(serverId, member).ConfigureAwait(false);
                     break;
-                }
 
                 case "ap_list":
-                {
-                    DiscordMessageBuilder msg = await BuildStaffListMessageAsync(serverId).ConfigureAwait(false);
-                    await e.Interaction.CreateResponseAsync(
-                        InteractionResponseType.UpdateMessage,
-                        new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
+                    resultMsg = await BuildStaffListMessageAsync(serverId).ConfigureAwait(false);
                     break;
-                }
 
                 case "ap_stats":
-                {
                     string period = parts.Length > 2 ? parts[2] : "week";
-                    DiscordMessageBuilder msg = await BuildStaffStatsMessageAsync(serverId, period).ConfigureAwait(false);
-                    await e.Interaction.CreateResponseAsync(
-                        InteractionResponseType.UpdateMessage,
-                        new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
+                    resultMsg = await BuildStaffStatsMessageAsync(serverId, period).ConfigureAwait(false);
                     break;
-                }
 
                 case "ap_profile_select":
-                {
                     string selectedUserId = e.Values.FirstOrDefault() ?? string.Empty;
                     if (!string.IsNullOrEmpty(selectedUserId))
-                    {
-                        DiscordMessageBuilder msg = await BuildStaffProfileMessageAsync(serverId, selectedUserId).ConfigureAwait(false);
-                        await e.Interaction.CreateResponseAsync(
-                            InteractionResponseType.UpdateMessage,
-                            new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
-                    }
+                        resultMsg = await BuildStaffProfileMessageAsync(serverId, selectedUserId).ConfigureAwait(false);
                     break;
-                }
 
                 case "ap_add_flow":
-                {
-                    DiscordMessageBuilder msg = await BuildAddScopeSelectMessageAsync(serverId).ConfigureAwait(false);
-                    await e.Interaction.CreateResponseAsync(
-                        InteractionResponseType.UpdateMessage,
-                        new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
+                    resultMsg = await BuildAddScopeSelectMessageAsync(serverId).ConfigureAwait(false);
                     break;
-                }
 
                 case "ap_add_pick_scope":
-                {
                     string selectedScope = e.Values.FirstOrDefault() ?? "all";
-                    DiscordMessageBuilder msg = await BuildAddRoleSelectMessageAsync(serverId, selectedScope).ConfigureAwait(false);
-                    await e.Interaction.CreateResponseAsync(
-                        InteractionResponseType.UpdateMessage,
-                        new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
+                    resultMsg = await BuildAddRoleSelectMessageAsync(serverId, selectedScope).ConfigureAwait(false);
                     break;
-                }
-
-                case "ap_add_pick_group":
-                {
-                    string scope = parts.Length > 2 ? parts[2] : "all";
-                    string chosenGroup = e.Values.FirstOrDefault() ?? string.Empty;
-                    if (string.IsNullOrEmpty(chosenGroup))
-                        return;
-
-                    // Block ruk.* and vip.*
-                    if (chosenGroup.StartsWith("ruk.", StringComparison.OrdinalIgnoreCase) ||
-                        chosenGroup.StartsWith("vip.", StringComparison.OrdinalIgnoreCase) ||
-                        chosenGroup.Equals("owner", StringComparison.OrdinalIgnoreCase) ||
-                        chosenGroup.Equals("creator", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await e.Interaction.CreateResponseAsync(
-                            InteractionResponseType.ChannelMessageWithSource,
-                            new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 Назначение этой роли через бота заблокировано."))
-                            .ConfigureAwait(false);
-                        return;
-                    }
-
-                    string scopeName = scope switch { "nr" => "NR", "mrp" => "MRP", _ => "ALL" };
-
-                    // Open clean modal with SteamID64
-                    var modal = new DiscordInteractionResponseBuilder()
-                        .WithTitle($"Назначение: {chosenGroup} [{scopeName}]")
-                        .WithCustomId($"ap_modal_add_submit:{server.Config.Id}:{scope}:{chosenGroup}")
-                        .AddComponents(new TextInputComponent(
-                            "SteamID64 администратора",
-                            "input_steamid",
-                            "Например: 76561198708583029 (17 цифр)",
-                            null,
-                            true,
-                            TextInputStyle.Short,
-                            17,
-                            25))
-                        .AddComponents(new TextInputComponent(
-                            "Discord ID пользователя (для привязки)",
-                            "input_discord",
-                            "1497881868127965264 (опционально)",
-                            null,
-                            false,
-                            TextInputStyle.Short))
-                        .AddComponents(new TextInputComponent(
-                            "Основание / Причина назначения",
-                            "input_reason",
-                            "Причина назначения в состав",
-                            "Назначение в состав",
-                            true,
-                            TextInputStyle.Paragraph));
-
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal).ConfigureAwait(false);
-                    break;
-                }
 
                 case "ap_remove_menu":
-                {
-                    DiscordMessageBuilder msg = await BuildRemoveMenuMessageAsync(serverId).ConfigureAwait(false);
-                    await e.Interaction.CreateResponseAsync(
-                        InteractionResponseType.UpdateMessage,
-                        new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
+                    resultMsg = await BuildRemoveMenuMessageAsync(serverId).ConfigureAwait(false);
                     break;
-                }
 
                 case "ap_remove_select":
                 case "ap_quick_remove":
-                {
                     string targetUserId = action == "ap_quick_remove" && parts.Length > 2
                         ? parts[2]
                         : e.Values.FirstOrDefault() ?? string.Empty;
 
                     if (!string.IsNullOrEmpty(targetUserId))
                     {
-                        await HandleRemoveExecutionAsync(e, server, targetUserId, member).ConfigureAwait(false);
+                        await HandleRemoveExecutionDeferredAsync(e, server, targetUserId, member).ConfigureAwait(false);
+                        return;
                     }
                     break;
-                }
+            }
+
+            if (resultMsg != null)
+            {
+                var webhook = new DiscordWebhookBuilder(resultMsg);
+                await e.Interaction.EditOriginalResponseAsync(webhook).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
@@ -777,13 +748,13 @@ internal sealed class AdminPanelService
         if (server == null)
             return;
 
+        await e.Interaction.DeferAsync(ephemeral: true).ConfigureAwait(false);
+
         DiscordMember? member = e.Interaction.User as DiscordMember ?? await e.Interaction.Guild.GetMemberAsync(e.Interaction.User.Id).ConfigureAwait(false);
         if (member == null || !AccessResolver.CanExecute(member, server.Config, "setgroup"))
         {
-            await e.Interaction.CreateResponseAsync(
-                InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 Доступ ограничен."))
-                .ConfigureAwait(false);
+            await e.Interaction.EditOriginalResponseAsync(
+                new DiscordWebhookBuilder().WithContent("🚫 **Доступ ограничен.**")).ConfigureAwait(false);
             return;
         }
 
@@ -793,10 +764,8 @@ internal sealed class AdminPanelService
             group.Equals("owner", StringComparison.OrdinalIgnoreCase) ||
             group.Equals("creator", StringComparison.OrdinalIgnoreCase))
         {
-            await e.Interaction.CreateResponseAsync(
-                InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 **Отказ безопасности:** Выдача этой роли через бота заблокирована."))
-                .ConfigureAwait(false);
+            await e.Interaction.EditOriginalResponseAsync(
+                new DiscordWebhookBuilder().WithContent("🚫 **Отказ безопасности:** Выдача этой роли через бота заблокирована.")).ConfigureAwait(false);
             return;
         }
 
@@ -808,12 +777,8 @@ internal sealed class AdminPanelService
         string cleanSteamId = rawSteamId.Replace("@steam", "").Trim();
         if (!SteamId64Regex.IsMatch(cleanSteamId))
         {
-            await e.Interaction.CreateResponseAsync(
-                InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder()
-                    .AsEphemeral(true)
-                    .WithContent("❌ **Некорректный SteamID64.** Укажите ровно 17 цифр SteamID игрока (например, `76561198708583029`)."))
-                .ConfigureAwait(false);
+            await e.Interaction.EditOriginalResponseAsync(
+                new DiscordWebhookBuilder().WithContent("❌ **Некорректный SteamID64.** Укажите ровно 17 цифр SteamID игрока (например, `76561198708583029`).")).ConfigureAwait(false);
             return;
         }
 
@@ -866,9 +831,7 @@ internal sealed class AdminPanelService
             };
             builder.AddComponents(row);
 
-            await e.Interaction.CreateResponseAsync(
-                InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder(builder).AsEphemeral(true)).ConfigureAwait(false);
+            await e.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder(builder)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -878,13 +841,11 @@ internal sealed class AdminPanelService
                 .WithColor(new DiscordColor(231, 76, 60))
                 .Build();
 
-            await e.Interaction.CreateResponseAsync(
-                InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().AddEmbed(errEmbed).AsEphemeral(true)).ConfigureAwait(false);
+            await e.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().AddEmbed(errEmbed)).ConfigureAwait(false);
         }
     }
 
-    private async Task HandleRemoveExecutionAsync(ComponentInteractionCreateEventArgs e, ServerRuntime server, string targetUserId, DiscordMember member)
+    private async Task HandleRemoveExecutionDeferredAsync(ComponentInteractionCreateEventArgs e, ServerRuntime server, string targetUserId, DiscordMember member)
     {
         try
         {
@@ -917,9 +878,7 @@ internal sealed class AdminPanelService
             };
             builder.AddComponents(row);
 
-            await e.Interaction.CreateResponseAsync(
-                InteractionResponseType.UpdateMessage,
-                new DiscordInteractionResponseBuilder(builder)).ConfigureAwait(false);
+            await e.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder(builder)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -929,9 +888,7 @@ internal sealed class AdminPanelService
                 .WithColor(new DiscordColor(231, 76, 60))
                 .Build();
 
-            await e.Interaction.CreateResponseAsync(
-                InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().AddEmbed(errEmbed).AsEphemeral(true)).ConfigureAwait(false);
+            await e.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder().AddEmbed(errEmbed)).ConfigureAwait(false);
         }
     }
 

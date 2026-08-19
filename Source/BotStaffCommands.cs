@@ -46,12 +46,11 @@ internal sealed class BotStaffCommands : ApplicationCommandModule
             return;
         }
 
+        await context.DeferAsync(ephemeral: runtime.Config.EphemeralCommandResponses).ConfigureAwait(false);
+
         var panelService = new AdminPanelService(context.Client, runtime);
         DiscordMessageBuilder msg = await panelService.BuildMainPanelMessageAsync(server.Config.Id, context.Member).ConfigureAwait(false);
 
-        await context.CreateResponseAsync(
-            InteractionResponseType.ChannelMessageWithSource,
-            new DiscordInteractionResponseBuilder(msg).AsEphemeral(runtime.Config.EphemeralCommandResponses))
-            .ConfigureAwait(false);
+        await context.EditResponseAsync(new DiscordWebhookBuilder(msg)).ConfigureAwait(false);
     }
 }

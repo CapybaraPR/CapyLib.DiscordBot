@@ -215,10 +215,12 @@ internal sealed class AdminPanelService
 
         bool isWeek = period == "week";
         List<StaffMemberDto> staffList = new();
+        PlayersResponse? onlinePlayers = null;
         try
         {
             StaffListResponse resp = await server.Api.GetStaffListAsync(CancellationToken.None).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
+            onlinePlayers = await server.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -229,6 +231,12 @@ internal sealed class AdminPanelService
                 .Build();
             return new DiscordMessageBuilder().AddEmbed(errEmbed);
         }
+
+        HashSet<string> onlineIds = (onlinePlayers?.Players ?? new List<ApiPlayer>())
+            .Select(p => p.UserId)
+            .OfType<string>()
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var sorted = isWeek
             ? staffList.OrderByDescending(s => s.WeeklyPlaytimeSeconds).ToList()
@@ -254,8 +262,11 @@ internal sealed class AdminPanelService
             string statusIcon = (isWeek && time >= 4 * 3600) ? "✅" : (isWeek && time > 0 ? "⚠️" : "❌");
             int totalPunishments = st.BansCount + st.MutesCount + st.KicksCount;
 
+            bool isOnline = onlineIds.Contains(st.Id);
+            string lastSeenStr = FormatLastSeen(st.LastSeenUtc, isOnline);
+
             sb.AppendLine($"{medal} {statusIcon} **{name}** `[{st.Group}]`\n" +
-                          $"└ Онлайн: **{FormatTime(time)}** | Выдано наказаний: **{totalPunishments}**\n");
+                          $"└ Онлайн: **{FormatTime(time)}** | Был в сети: **{lastSeenStr}** | Выдано наказаний: **{totalPunishments}**\n");
             rank++;
         }
 
@@ -284,10 +295,12 @@ internal sealed class AdminPanelService
             return new DiscordMessageBuilder().WithContent("Сервер не найден.");
 
         List<StaffMemberDto> staffList = new();
+        PlayersResponse? onlinePlayers = null;
         try
         {
             StaffListResponse resp = await server.Api.GetStaffListAsync(CancellationToken.None).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
+            onlinePlayers = await server.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -298,6 +311,12 @@ internal sealed class AdminPanelService
                 .Build();
             return new DiscordMessageBuilder().AddEmbed(errEmbed);
         }
+
+        HashSet<string> onlineIds = (onlinePlayers?.Players ?? new List<ApiPlayer>())
+            .Select(p => p.UserId)
+            .OfType<string>()
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         StaffMemberDto? st = staffList.FirstOrDefault(s => s.Id.Equals(staffUserId, StringComparison.OrdinalIgnoreCase));
         if (st == null)
@@ -314,6 +333,8 @@ internal sealed class AdminPanelService
         string name = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : cleanId;
         string discordMention = st.DiscordUserId != 0 ? $"<@{st.DiscordUserId}> (`{st.DiscordUserId}`)" : "*Не привязан*";
         string appointed = st.AssignedAtUtc != default ? st.AssignedAtUtc.ToString("dd.MM.yyyy HH:mm UTC") : "*Неизвестно*";
+        bool isOnline = onlineIds.Contains(st.Id);
+        string lastSeenStr = FormatLastSeen(st.LastSeenUtc, isOnline);
 
         var embed = new DiscordEmbedBuilder()
             .WithTitle($"📁 ЛИЧНОЕ ДЕЛО • {name}")
@@ -323,7 +344,8 @@ internal sealed class AdminPanelService
             .AddField("💬 Discord", discordMention, true)
             .AddField("⏱️ Онлайн",
                 $"• За эту неделю: **{FormatTime(st.WeeklyPlaytimeSeconds)}**\n" +
-                $"• За всё время: **{FormatTime(st.TotalPlaytimeSeconds)}**", true)
+                $"• За всё время: **{FormatTime(st.TotalPlaytimeSeconds)}**\n" +
+                $"• Был в сети: **{lastSeenStr}**", true)
             .AddField("🔨 Наказания",
                 $"• Банов: **{st.BansCount}**\n" +
                 $"• Мутов: **{st.MutesCount}**\n" +
@@ -917,6 +939,20 @@ internal sealed class AdminPanelService
     {
         if (string.IsNullOrEmpty(userId)) return string.Empty;
         return userId.Replace("@steam", "").Replace("@discord", "").Replace("@northwood", "").Trim();
+    }
+
+    private static string FormatLastSeen(DateTime lastSeenUtc, bool isOnline)
+    {
+        if (isOnline) return "🟢 В игре";
+        if (lastSeenUtc == default || lastSeenUtc == DateTime.MinValue || lastSeenUtc.Year < 2020)
+            return "Не заходил";
+
+        TimeSpan diff = DateTime.UtcNow - lastSeenUtc;
+        if (diff.TotalMinutes < 5) return "Только что";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes} м. назад";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} ч. назад";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} дн. назад";
+        return lastSeenUtc.ToString("dd.MM");
     }
 
     private static string GetCategory(string group)

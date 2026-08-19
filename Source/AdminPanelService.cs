@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
@@ -12,6 +13,8 @@ namespace AspectDiscordBot;
 
 internal sealed class AdminPanelService
 {
+    private static readonly Regex SteamId64Regex = new(@"^\d{17}$", RegexOptions.Compiled);
+
     private readonly DiscordClient _client;
     private readonly BotRuntime _runtime;
 
@@ -63,7 +66,7 @@ internal sealed class AdminPanelService
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         int onlineStaffCount = staffList.Count(s => onlineIds.Contains(s.Id));
-        int quotaMetCount = staffList.Count(s => s.WeeklyPlaytimeSeconds >= 4 * 3600); // 4 часа норма
+        int quotaMetCount = staffList.Count(s => s.WeeklyPlaytimeSeconds >= 4 * 3600);
 
         var embed = new DiscordEmbedBuilder()
             .WithTitle($"🛡️ ПАНЕЛЬ УПРАВЛЕНИЯ ПЕРСОНАЛОМ • {server.Config.DisplayName}")
@@ -79,7 +82,7 @@ internal sealed class AdminPanelService
 
         var builder = new DiscordMessageBuilder().AddEmbed(embed.Build());
 
-        // Row 1: Actions
+        // Row 1: Quick navigation
         var row1 = new List<DiscordComponent>
         {
             new DiscordButtonComponent(ButtonStyle.Primary, $"ap_list:{server.Config.Id}", "👥 Состав администрации", false, new DiscordComponentEmoji("👥")),
@@ -88,10 +91,10 @@ internal sealed class AdminPanelService
         };
         builder.AddComponents(row1);
 
-        // Row 2: Management
+        // Row 2: Management buttons
         var row2 = new List<DiscordComponent>
         {
-            new DiscordButtonComponent(ButtonStyle.Success, $"ap_add_modal:{server.Config.Id}", "➕ Назначить сотрудника", false, new DiscordComponentEmoji("➕")),
+            new DiscordButtonComponent(ButtonStyle.Success, $"ap_add_flow:{server.Config.Id}", "➕ Назначить сотрудника", false, new DiscordComponentEmoji("➕")),
             new DiscordButtonComponent(ButtonStyle.Danger, $"ap_remove_menu:{server.Config.Id}", "➖ Снять с должности", staffList.Count == 0, new DiscordComponentEmoji("➖"))
         };
         builder.AddComponents(row2);
@@ -193,7 +196,7 @@ internal sealed class AdminPanelService
         {
             new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Главное меню", false, new DiscordComponentEmoji("◀️")),
             new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_list:{server.Config.Id}", "🔄 Обновить список", false, new DiscordComponentEmoji("🔄")),
-            new DiscordButtonComponent(ButtonStyle.Success, $"ap_add_modal:{server.Config.Id}", "➕ Назначить", false, new DiscordComponentEmoji("➕"))
+            new DiscordButtonComponent(ButtonStyle.Success, $"ap_add_flow:{server.Config.Id}", "➕ Назначить", false, new DiscordComponentEmoji("➕"))
         };
         builder.AddComponents(row);
         return builder;
@@ -346,6 +349,85 @@ internal sealed class AdminPanelService
         return builder;
     }
 
+    public Task<DiscordMessageBuilder> BuildAddRoleSelectMessageAsync(string serverId)
+    {
+        if (!_runtime.TryGetServer(serverId, out ServerRuntime? server) || server == null)
+            server = _runtime.Servers.FirstOrDefault();
+
+        if (server == null)
+            return Task.FromResult(new DiscordMessageBuilder().WithContent("Сервер не найден."));
+
+        // Only assignable roles, STRICTLY EXCLUDING ruk.*
+        var assignable = new List<(string group, string title, string tag, string emoji)>
+        {
+            // Administration
+            ("adm.curator", "Куратор администрации", "Администрация", "🛡️"),
+            ("adm.senior", "Старший администратор", "Администрация", "🛡️"),
+            ("adm.admin", "Администратор", "Администрация", "🛡️"),
+            ("adm.junior", "Младший администратор", "Администрация", "🛡️"),
+            ("adm.trainee", "Стажёр", "Администрация", "🛡️"),
+
+            // Events
+            ("event.curator", "Куратор ивентеров", "Ивентеры", "🎭"),
+            ("event.manager", "Ивент-менеджер", "Ивентеры", "🎭"),
+            ("event.senior", "Старший ивентер", "Ивентеры", "🎭"),
+            ("event.eventer", "Ивентёр", "Ивентеры", "🎭"),
+            ("event.trainee", "Стажёр ивентер", "Ивентеры", "🎭"),
+
+            // Builders
+            ("build.curator", "Куратор строителей", "Строители", "🔨"),
+            ("build.senior", "Старший строитель", "Строители", "🔨"),
+            ("build.builder", "Строитель", "Строители", "🔨"),
+            ("build.trainee", "Стажёр строитель", "Строители", "🔨"),
+
+            // VIP / Media
+            ("vip.legend", "Легенда", "VIP / Медиа", "⭐"),
+            ("vip.media", "Медиа", "VIP / Медиа", "⭐"),
+            ("vip.vip", "VIP", "VIP / Медиа", "⭐")
+        };
+
+        var embed = new DiscordEmbedBuilder()
+            .WithTitle($"➕ НАЗНАЧЕНИЕ СОТРУДНИКА • ВЫБОР ДОЛЖНОСТИ")
+            .WithDescription(
+                "**Шаг 1 из 2:** Выберите желаемую должность из выпадающего списка ниже.\n\n" +
+                "🔒 **Безопасность:** Должности высшего руководства (`ruk.*`) выдавать через бота запрещено.\n" +
+                "💡 Вы можете воспользоваться поиском в списке по названию или тегу (`adm`, `event`, `build`, `vip`).")
+            .WithColor(new DiscordColor(46, 204, 113))
+            .WithFooter("Капибара SCP:SL • Назначение персонала")
+            .WithTimestamp(DateTimeOffset.UtcNow);
+
+        var options = new List<DiscordSelectComponentOption>();
+        foreach (var r in assignable)
+        {
+            options.Add(new DiscordSelectComponentOption(
+                $"{r.title} ({r.group})",
+                r.group,
+                $"Тег: {r.tag} | Ранг: {r.group}",
+                false,
+                new DiscordComponentEmoji(r.emoji)));
+        }
+
+        var select = new DiscordSelectComponent(
+            $"ap_add_pick_group:{server.Config.Id}",
+            "🏷️ Выберите должность для назначения...",
+            options,
+            false,
+            1,
+            1);
+
+        var builder = new DiscordMessageBuilder()
+            .AddEmbed(embed.Build())
+            .AddComponents(select);
+
+        var row = new List<DiscordComponent>
+        {
+            new DiscordButtonComponent(ButtonStyle.Secondary, $"ap_back:{server.Config.Id}", "◀️ Отмена / Назад", false, new DiscordComponentEmoji("◀️"))
+        };
+        builder.AddComponents(row);
+
+        return Task.FromResult(builder);
+    }
+
     public async Task<DiscordMessageBuilder> BuildRemoveMenuMessageAsync(string serverId)
     {
         if (!_runtime.TryGetServer(serverId, out ServerRuntime? server) || server == null)
@@ -482,6 +564,63 @@ internal sealed class AdminPanelService
                     break;
                 }
 
+                case "ap_add_flow":
+                {
+                    DiscordMessageBuilder msg = await BuildAddRoleSelectMessageAsync(serverId).ConfigureAwait(false);
+                    await e.Interaction.CreateResponseAsync(
+                        InteractionResponseType.UpdateMessage,
+                        new DiscordInteractionResponseBuilder(msg)).ConfigureAwait(false);
+                    break;
+                }
+
+                case "ap_add_pick_group":
+                {
+                    string chosenGroup = e.Values.FirstOrDefault() ?? string.Empty;
+                    if (string.IsNullOrEmpty(chosenGroup))
+                        return;
+
+                    // Block ruk.*
+                    if (chosenGroup.StartsWith("ruk.", StringComparison.OrdinalIgnoreCase) || chosenGroup.Equals("owner", StringComparison.OrdinalIgnoreCase) || chosenGroup.Equals("creator", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await e.Interaction.CreateResponseAsync(
+                            InteractionResponseType.ChannelMessageWithSource,
+                            new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 Назначение ролей руководства (`ruk.*`) через бота строго запрещено."))
+                            .ConfigureAwait(false);
+                        return;
+                    }
+
+                    // Open clean modal with SteamID64
+                    var modal = new DiscordInteractionResponseBuilder()
+                        .WithTitle($"Назначение: {chosenGroup}")
+                        .WithCustomId($"ap_modal_add_submit:{server.Config.Id}:{chosenGroup}")
+                        .AddComponents(new TextInputComponent(
+                            "SteamID64 администратора",
+                            "input_steamid",
+                            "Например: 76561198708583029 (17 цифр)",
+                            null,
+                            true,
+                            TextInputStyle.Short,
+                            17,
+                            25))
+                        .AddComponents(new TextInputComponent(
+                            "Discord ID пользователя (для привязки)",
+                            "input_discord",
+                            "1497881868127965264 (опционально)",
+                            null,
+                            false,
+                            TextInputStyle.Short))
+                        .AddComponents(new TextInputComponent(
+                            "Основание / Причина назначения",
+                            "input_reason",
+                            "Причина назначения в состав",
+                            "Назначение в состав",
+                            true,
+                            TextInputStyle.Paragraph));
+
+                    await e.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal).ConfigureAwait(false);
+                    break;
+                }
+
                 case "ap_remove_menu":
                 {
                     DiscordMessageBuilder msg = await BuildRemoveMenuMessageAsync(serverId).ConfigureAwait(false);
@@ -504,21 +643,6 @@ internal sealed class AdminPanelService
                     }
                     break;
                 }
-
-                case "ap_add_modal":
-                {
-                    var modal = new DiscordInteractionResponseBuilder()
-                        .WithTitle("Назначение администратора")
-                        .WithCustomId($"ap_modal_add_submit:{server.Config.Id}")
-                        .AddComponents(new TextInputComponent("SteamID64 или Ник игрока онлайн", "input_player", "Например: 76561198708583029 или Nickname", null, true, TextInputStyle.Short))
-                        .AddComponents(new TextInputComponent("Должность (ранг в игре)", "input_group", "adm.admin, adm.senior, ruk.manager, event.eventer...", null, true, TextInputStyle.Short))
-                        .AddComponents(new TextInputComponent("Discord ID пользователя (для привязки)", "input_discord", "1497881868127965264 (опционально)", null, false, TextInputStyle.Short))
-                        .AddComponents(new TextInputComponent("Область действия (all / local)", "input_scope", "all или local", "all", true, TextInputStyle.Short))
-                        .AddComponents(new TextInputComponent("Основание / Причина назначения", "input_reason", "Причина назначения", "Назначение через Admin Panel", false, TextInputStyle.Paragraph));
-
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal).ConfigureAwait(false);
-                    break;
-                }
             }
         }
         catch (Exception ex)
@@ -535,6 +659,7 @@ internal sealed class AdminPanelService
 
         string[] parts = id.Split(':');
         string serverId = parts.Length > 1 ? parts[1] : "nr";
+        string group = parts.Length > 2 ? parts[2] : string.Empty;
 
         if (!_runtime.TryGetServer(serverId, out ServerRuntime? server) || server == null)
             server = _runtime.Servers.FirstOrDefault();
@@ -552,36 +677,46 @@ internal sealed class AdminPanelService
             return;
         }
 
-        string player = e.Values["input_player"]?.Trim() ?? string.Empty;
-        string group = e.Values["input_group"]?.Trim() ?? string.Empty;
-        string discordStr = e.Values["input_discord"]?.Trim() ?? string.Empty;
-        string scope = e.Values["input_scope"]?.Trim().ToLowerInvariant() ?? "all";
-        string reason = e.Values["input_reason"]?.Trim() ?? "Назначение через Admin Panel";
-
-        if (string.IsNullOrEmpty(player) || string.IsNullOrEmpty(group))
+        // Security block on ruk.*
+        if (group.StartsWith("ruk.", StringComparison.OrdinalIgnoreCase) || group.Equals("owner", StringComparison.OrdinalIgnoreCase) || group.Equals("creator", StringComparison.OrdinalIgnoreCase))
         {
             await e.Interaction.CreateResponseAsync(
                 InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("❌ Укажите игрока и должность."))
+                new DiscordInteractionResponseBuilder().AsEphemeral(true).WithContent("🚫 **Отказ безопасности:** Выдача высших ролей руководства (`ruk.*`) через бота заблокирована."))
+                .ConfigureAwait(false);
+            return;
+        }
+
+        string rawSteamId = e.Values["input_steamid"]?.Trim() ?? string.Empty;
+        string discordStr = e.Values["input_discord"]?.Trim() ?? string.Empty;
+        string reason = e.Values["input_reason"]?.Trim() ?? "Назначение в состав";
+
+        // Clean steam ID
+        string cleanSteamId = rawSteamId.Replace("@steam", "").Trim();
+        if (!SteamId64Regex.IsMatch(cleanSteamId))
+        {
+            await e.Interaction.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder()
+                    .AsEphemeral(true)
+                    .WithContent("❌ **Некорректный SteamID64.** Укажите ровно 17 цифр SteamID игрока (например, `76561198708583029`)."))
                 .ConfigureAwait(false);
             return;
         }
 
         ulong discordId = 0;
         if (!string.IsNullOrEmpty(discordStr))
-            ulong.TryParse(discordStr.Replace("<@", "").Replace(">", "").Replace("!", ""), out discordId);
-
-        string targetScope = scope == "local" ? server.Config.Id : "all";
+            ulong.TryParse(discordStr.Replace("<@", "").Replace(">", "").Replace("!", "").Trim(), out discordId);
 
         try
         {
             var req = new StaffAddRequest
             {
-                UserId = player,
+                UserId = $"{cleanSteamId}@steam",
                 DiscordUserId = discordId,
                 DiscordUserName = string.Empty,
                 Group = group,
-                ServerScope = targetScope,
+                ServerScope = "all",
                 ActorDiscordId = e.Interaction.User.Id,
                 ActorDiscordName = e.Interaction.User.Username,
                 Reason = reason
@@ -590,12 +725,13 @@ internal sealed class AdminPanelService
             StaffMemberResponse addResp = await server.Api.AddStaffAsync(req, CancellationToken.None).ConfigureAwait(false);
 
             var successEmbed = new DiscordEmbedBuilder()
-                .WithTitle($"✅ Назначение успешно выполнено")
+                .WithTitle($"✅ Сотрудник успешно назначен")
                 .WithDescription(
-                    $"Сотрудник **{addResp.Member?.Nickname ?? player}** успешно добавлен в состав!\n\n" +
+                    $"Сотрудник **{addResp.Member?.Nickname ?? cleanSteamId}** успешно добавлен в постоянный реестр!\n\n" +
                     $"• **Должность:** `{group}`\n" +
-                    $"• **SteamID / UserID:** `{addResp.Member?.Id ?? player}`\n" +
-                    $"• **Область действия:** `{targetScope}`\n" +
+                    $"• **SteamID64:** `{cleanSteamId}`\n" +
+                    $"• **Discord:** {(discordId != 0 ? $"<@{discordId}> (`{discordId}`)" : "*Не привязан*")}\n" +
+                    $"• **Область:** `Все серверы проекта (ALL)`\n" +
                     $"• **Основание:** *{reason}*")
                 .WithColor(new DiscordColor(46, 204, 113))
                 .WithFooter("Капибара SCP:SL • Реестр персонала")

@@ -71,13 +71,13 @@ internal sealed class AdminPanelService
         var embed = new DiscordEmbedBuilder()
             .WithTitle($"🛡️ ПАНЕЛЬ УПРАВЛЕНИЯ ПЕРСОНАЛОМ • {server.Config.DisplayName}")
             .WithDescription(
-                "Интерактивный центр управления реестром персонала, мониторинга онлайна и личных дел.\n" +
-                "Используйте кнопки и меню ниже для навигации и управления.")
+                "Управление составом администрации, мониторинг онлайна и нормы стаффа.\n" +
+                "Используйте кнопки и меню ниже.")
             .WithColor(new DiscordColor(88, 101, 242))
-            .AddField("👥 Реестр персонала", $"Всего сотрудников: **{staffList.Count}**", true)
+            .AddField("👥 Состав в базе", $"Всего сотрудников: **{staffList.Count}**", true)
             .AddField("🟢 Онлайн сейчас", $"В игре: **{onlineStaffCount}** чел.", true)
             .AddField("⏱️ Норма недели (≥4ч)", $"Выполнили: **{quotaMetCount}** из **{staffList.Count}**", true)
-            .WithFooter("Капибара SCP:SL • Система администрирования")
+            .WithFooter("Капибара SCP:SL • Реестр администрации")
             .WithTimestamp(DateTimeOffset.UtcNow);
 
         var builder = new DiscordMessageBuilder().AddEmbed(embed.Build());
@@ -107,10 +107,12 @@ internal sealed class AdminPanelService
             {
                 bool isOnline = onlineIds.Contains(st.Id);
                 string statusEmoji = isOnline ? "🟢" : "⚪";
-                string label = $"[{st.Group}] {(!string.IsNullOrEmpty(st.Nickname) ? st.Nickname : st.Id)}";
+                string cleanId = CleanUserId(st.Id);
+                string displayName = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : cleanId;
+                string label = $"[{st.Group}] {displayName}";
                 if (label.Length > 100) label = label.Substring(0, 97) + "...";
 
-                string desc = $"SteamID: {st.Id} | Неделя: {FormatTimeShort(st.WeeklyPlaytimeSeconds)}";
+                string desc = $"SteamID: {cleanId} | Неделя: {FormatTimeShort(st.WeeklyPlaytimeSeconds)}";
                 if (desc.Length > 100) desc = desc.Substring(0, 97) + "...";
 
                 options.Add(new DiscordSelectComponentOption(
@@ -183,7 +185,8 @@ internal sealed class AdminPanelService
                 {
                     bool isOnline = onlineIds.Contains(st.Id);
                     string status = isOnline ? "🟢" : "⚪";
-                    string name = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : st.Id;
+                    string cleanId = CleanUserId(st.Id);
+                    string name = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : cleanId;
                     string discord = st.DiscordUserId != 0 ? $" (<@{st.DiscordUserId}>)" : "";
                     sb.AppendLine($"{status} **{name}**{discord} — `{st.Group}` `[Неделя: {FormatTimeShort(st.WeeklyPlaytimeSeconds)}]`");
                 }
@@ -237,7 +240,7 @@ internal sealed class AdminPanelService
                 $"Период статистики: **{(isWeek ? "Текущая неделя" : "За всё время")}**\n" +
                 $"Минимальная норма недели: **4 ч.** (зелёный = норма выполнена)\n")
             .WithColor(new DiscordColor(241, 196, 15))
-            .WithFooter("Капибара SCP:SL • Аналитика персонала")
+            .WithFooter("Капибара SCP:SL • Статистика стаффа")
             .WithTimestamp(DateTimeOffset.UtcNow);
 
         var sb = new StringBuilder();
@@ -245,12 +248,14 @@ internal sealed class AdminPanelService
         foreach (StaffMemberDto st in sorted.Take(15))
         {
             string medal = rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => $"**#{rank}**" };
-            string name = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : st.Id;
+            string cleanId = CleanUserId(st.Id);
+            string name = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : cleanId;
             long time = isWeek ? st.WeeklyPlaytimeSeconds : st.TotalPlaytimeSeconds;
             string statusIcon = (isWeek && time >= 4 * 3600) ? "✅" : (isWeek && time > 0 ? "⚠️" : "❌");
+            int totalPunishments = st.BansCount + st.MutesCount + st.KicksCount;
 
             sb.AppendLine($"{medal} {statusIcon} **{name}** `[{st.Group}]`\n" +
-                          $"└ Онлайн: **{FormatTime(time)}** | Дежурство: **{FormatTime(st.DutyPlaytimeSeconds)}** | Нарушений пресечено: **{st.BansCount + st.MutesCount + st.KicksCount}**\n");
+                          $"└ Онлайн: **{FormatTime(time)}** | Выдано наказаний: **{totalPunishments}**\n");
             rank++;
         }
 
@@ -305,7 +310,8 @@ internal sealed class AdminPanelService
             return new DiscordMessageBuilder().AddEmbed(notFound);
         }
 
-        string name = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : st.Id;
+        string cleanId = CleanUserId(st.Id);
+        string name = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : cleanId;
         string discordMention = st.DiscordUserId != 0 ? $"<@{st.DiscordUserId}> (`{st.DiscordUserId}`)" : "*Не привязан*";
         string appointed = st.AssignedAtUtc != default ? st.AssignedAtUtc.ToString("dd.MM.yyyy HH:mm UTC") : "*Неизвестно*";
 
@@ -313,19 +319,18 @@ internal sealed class AdminPanelService
             .WithTitle($"📁 ЛИЧНОЕ ДЕЛО • {name}")
             .WithColor(new DiscordColor(155, 89, 182))
             .AddField("🏷️ Должность", $"`{st.Group}` (Сервер: `{st.ServerScope}`)", true)
-            .AddField("🆔 SteamID64", $"`{st.Id}`", true)
+            .AddField("🆔 SteamID64", $"`{cleanId}`", true)
             .AddField("💬 Discord", discordMention, true)
-            .AddField("⏱️ Активность",
+            .AddField("⏱️ Онлайн",
                 $"• За эту неделю: **{FormatTime(st.WeeklyPlaytimeSeconds)}**\n" +
-                $"• За всё время: **{FormatTime(st.TotalPlaytimeSeconds)}**\n" +
-                $"• В дежурстве / спеках: **{FormatTime(st.DutyPlaytimeSeconds)}**", false)
-            .AddField("🔨 Модерация",
-                $"• Выдано банов: **{st.BansCount}**\n" +
-                $"• Выдано мутов: **{st.MutesCount}**\n" +
-                $"• Выдано киков: **{st.KicksCount}**", true)
+                $"• За всё время: **{FormatTime(st.TotalPlaytimeSeconds)}**", true)
+            .AddField("🔨 Наказания",
+                $"• Банов: **{st.BansCount}**\n" +
+                $"• Мутов: **{st.MutesCount}**\n" +
+                $"• Киков: **{st.KicksCount}**", true)
             .AddField("📅 Назначение",
                 $"• Дата: **{appointed}**\n" +
-                $"• Кем назначен: **{st.AssignedByDiscordName}**", true)
+                $"• Назначил: **{st.AssignedByDiscordName}**", false)
             .WithFooter("Капибара SCP:SL • Досье сотрудника")
             .WithTimestamp(DateTimeOffset.UtcNow);
 
@@ -336,7 +341,7 @@ internal sealed class AdminPanelService
             {
                 histSb.AppendLine($"• `[{h.TimestampUtc:dd.MM.yyyy}]` **{h.Action}** ({h.OldGroup} ➔ {h.NewGroup}) — {h.Reason} (от {h.ActorDiscordName})");
             }
-            embed.AddField("📜 История изменений", histSb.ToString(), false);
+            embed.AddField("📜 История рангов", histSb.ToString(), false);
         }
 
         var builder = new DiscordMessageBuilder().AddEmbed(embed.Build());
@@ -426,7 +431,6 @@ internal sealed class AdminPanelService
             _ => "🌐 Все серверы проекта (ALL)"
         };
 
-        // Assignable staff groups ONLY: Administration, Events, Builders (NO ruk.*, NO vip.*)
         var assignable = new List<(string group, string title, string tag, string emoji)>
         {
             // Administration
@@ -527,10 +531,12 @@ internal sealed class AdminPanelService
             var options = new List<DiscordSelectComponentOption>();
             foreach (StaffMemberDto st in staffList.Take(25))
             {
-                string label = $"[{st.Group}] {(!string.IsNullOrEmpty(st.Nickname) ? st.Nickname : st.Id)}";
+                string cleanId = CleanUserId(st.Id);
+                string displayName = !string.IsNullOrEmpty(st.Nickname) ? st.Nickname : cleanId;
+                string label = $"[{st.Group}] {displayName}";
                 if (label.Length > 100) label = label.Substring(0, 97) + "...";
 
-                string desc = $"SteamID: {st.Id} | Неделя: {FormatTimeShort(st.WeeklyPlaytimeSeconds)}";
+                string desc = $"SteamID: {cleanId} | Неделя: {FormatTimeShort(st.WeeklyPlaytimeSeconds)}";
                 if (desc.Length > 100) desc = desc.Substring(0, 97) + "...";
 
                 options.Add(new DiscordSelectComponentOption(label, st.Id, desc, false, new DiscordComponentEmoji("👤")));
@@ -870,10 +876,11 @@ internal sealed class AdminPanelService
 
             CommandResponse remResp = await server.Api.RemoveStaffAsync(req, CancellationToken.None).ConfigureAwait(false);
 
+            string cleanId = CleanUserId(targetUserId);
             var confirmEmbed = new DiscordEmbedBuilder()
                 .WithTitle($"🔴 Сотрудник снят с должности • {server.Config.DisplayName}")
                 .WithDescription(
-                    $"Администратор (`{targetUserId}`) успешно снят с должности.\n\n" +
+                    $"Администратор (`{cleanId}`) успешно снят с должности.\n\n" +
                     $"• **Результат:** {remResp.Output}\n" +
                     $"• **Действие:** Права на сервере отозваны, запись удалена из реестра.")
                 .WithColor(new DiscordColor(231, 76, 60))
@@ -906,6 +913,12 @@ internal sealed class AdminPanelService
         }
     }
 
+    private static string CleanUserId(string userId)
+    {
+        if (string.IsNullOrEmpty(userId)) return string.Empty;
+        return userId.Replace("@steam", "").Replace("@discord", "").Replace("@northwood", "").Trim();
+    }
+
     private static string GetCategory(string group)
     {
         string g = (group ?? string.Empty).ToLowerInvariant();
@@ -913,7 +926,6 @@ internal sealed class AdminPanelService
         if (g.StartsWith("adm.")) return "🛡️ Администрация";
         if (g.StartsWith("event.")) return "🎭 Ивентеры";
         if (g.StartsWith("build.")) return "🔨 Строители";
-        if (g.StartsWith("vip.")) return "⭐ VIP / Медиа";
         return "📋 Другие должности";
     }
 

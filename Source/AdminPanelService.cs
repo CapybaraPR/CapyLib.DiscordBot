@@ -44,7 +44,8 @@ internal sealed class AdminPanelService
         PlayersResponse? onlinePlayers = null;
         try
         {
-            StaffListResponse resp = await server.Api.GetStaffListAsync(CancellationToken.None).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
         }
         catch
@@ -53,7 +54,8 @@ internal sealed class AdminPanelService
 
         try
         {
-            onlinePlayers = await server.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
+            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            onlinePlayers = await server.Api.GetPlayersAsync(pCts.Token).ConfigureAwait(false);
         }
         catch
         {
@@ -148,9 +150,9 @@ internal sealed class AdminPanelService
         PlayersResponse? onlinePlayers = null;
         try
         {
-            StaffListResponse resp = await server.Api.GetStaffListAsync(CancellationToken.None).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
-            onlinePlayers = await server.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -160,6 +162,15 @@ internal sealed class AdminPanelService
                 .WithColor(new DiscordColor(231, 76, 60))
                 .Build();
             return new DiscordMessageBuilder().AddEmbed(errEmbed);
+        }
+
+        try
+        {
+            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            onlinePlayers = await server.Api.GetPlayersAsync(pCts.Token).ConfigureAwait(false);
+        }
+        catch
+        {
         }
 
         HashSet<string> onlineIds = (onlinePlayers?.Players ?? new List<ApiPlayer>())
@@ -218,9 +229,9 @@ internal sealed class AdminPanelService
         PlayersResponse? onlinePlayers = null;
         try
         {
-            StaffListResponse resp = await server.Api.GetStaffListAsync(CancellationToken.None).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
-            onlinePlayers = await server.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -230,6 +241,15 @@ internal sealed class AdminPanelService
                 .WithColor(new DiscordColor(231, 76, 60))
                 .Build();
             return new DiscordMessageBuilder().AddEmbed(errEmbed);
+        }
+
+        try
+        {
+            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            onlinePlayers = await server.Api.GetPlayersAsync(pCts.Token).ConfigureAwait(false);
+        }
+        catch
+        {
         }
 
         HashSet<string> onlineIds = (onlinePlayers?.Players ?? new List<ApiPlayer>())
@@ -298,9 +318,9 @@ internal sealed class AdminPanelService
         PlayersResponse? onlinePlayers = null;
         try
         {
-            StaffListResponse resp = await server.Api.GetStaffListAsync(CancellationToken.None).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
-            onlinePlayers = await server.Api.GetPlayersAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -310,6 +330,15 @@ internal sealed class AdminPanelService
                 .WithColor(new DiscordColor(231, 76, 60))
                 .Build();
             return new DiscordMessageBuilder().AddEmbed(errEmbed);
+        }
+
+        try
+        {
+            using var pCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            onlinePlayers = await server.Api.GetPlayersAsync(pCts.Token).ConfigureAwait(false);
+        }
+        catch
+        {
         }
 
         HashSet<string> onlineIds = (onlinePlayers?.Players ?? new List<ApiPlayer>())
@@ -530,7 +559,8 @@ internal sealed class AdminPanelService
         List<StaffMemberDto> staffList = new();
         try
         {
-            StaffListResponse resp = await server.Api.GetStaffListAsync(CancellationToken.None).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            StaffListResponse resp = await server.Api.GetStaffListAsync(cts.Token).ConfigureAwait(false);
             staffList = resp.Staff ?? new List<StaffMemberDto>();
         }
         catch
@@ -808,7 +838,8 @@ internal sealed class AdminPanelService
                 Reason = reason
             };
 
-            StaffMemberResponse addResp = await server.Api.AddStaffAsync(req, CancellationToken.None).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            StaffMemberResponse addResp = await server.Api.AddStaffAsync(req, cts.Token).ConfigureAwait(false);
 
             var successEmbed = new DiscordEmbedBuilder()
                 .WithTitle($"✅ Сотрудник успешно назначен")
@@ -857,7 +888,8 @@ internal sealed class AdminPanelService
                 Reason = "Снятие с должности через Admin Panel"
             };
 
-            CommandResponse remResp = await server.Api.RemoveStaffAsync(req, CancellationToken.None).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            CommandResponse remResp = await server.Api.RemoveStaffAsync(req, cts.Token).ConfigureAwait(false);
 
             string cleanId = CleanUserId(targetUserId);
             var confirmEmbed = new DiscordEmbedBuilder()

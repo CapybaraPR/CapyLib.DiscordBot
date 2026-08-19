@@ -57,6 +57,8 @@ internal static class Program
             slash.RegisterCommands<BotSlashCommands>(config.GuildId);
             slash.RegisterCommands<BotStaffCommands>(config.GuildId);
             var roleSync = new DiscordRoleSyncService(discord, runtime);
+            var adminPanel = new AdminPanelService(discord, runtime);
+            adminPanel.RegisterEvents();
 
             await discord.ConnectAsync().ConfigureAwait(false);
             Console.WriteLine(

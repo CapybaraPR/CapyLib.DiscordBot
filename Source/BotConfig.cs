@@ -32,6 +32,15 @@ internal sealed class BotConfig
     [JsonPropertyName("link_role_sync_seconds")]
     public int LinkRoleSyncSeconds { get; set; } = 60;
 
+    [JsonPropertyName("owner_dm_user_ids")]
+    public List<ulong> OwnerDmUserIds { get; set; } = new();
+
+    [JsonPropertyName("health_check_interval_seconds")]
+    public int HealthCheckIntervalSeconds { get; set; } = 60;
+
+    [JsonPropertyName("health_alert_failures_threshold")]
+    public int HealthAlertFailuresThreshold { get; set; } = 3;
+
     [JsonPropertyName("assignable_groups")]
     public List<AssignableGroup> AssignableGroups { get; set; } = new();
 
@@ -100,6 +109,15 @@ internal sealed class BotConfig
             errors.Add("log_batch_size должен быть от 1 до 100");
         if (LinkRoleSyncSeconds is < 15 or > 3600)
             errors.Add("link_role_sync_seconds должен быть от 15 до 3600");
+        if (HealthCheckIntervalSeconds is < 15 or > 3600)
+            errors.Add("health_check_interval_seconds должен быть от 15 до 3600");
+        if (HealthAlertFailuresThreshold is < 1 or > 60)
+            errors.Add("health_alert_failures_threshold должен быть от 1 до 60");
+
+        OwnerDmUserIds = (OwnerDmUserIds ?? new List<ulong>())
+            .Where(id => id != 0)
+            .Distinct()
+            .ToList();
 
         Servers ??= new List<ServerConfig>();
         if (Servers.Count == 0)

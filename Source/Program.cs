@@ -82,10 +82,12 @@ internal static class Program
             }
 
             var updater = new StatusUpdater(discord, runtime);
+            var healthMonitor = new HealthMonitorService(discord, runtime);
             var tasks = new List<Task>
             {
                 updater.RunAsync(shutdown.Token),
-                roleSync.RunAsync(shutdown.Token)
+                roleSync.RunAsync(shutdown.Token),
+                healthMonitor.RunAsync(shutdown.Token)
             };
             tasks.AddRange(runtime.Servers.Select(server =>
                 new LogForwarder(discord, runtime, server).RunAsync(shutdown.Token)));

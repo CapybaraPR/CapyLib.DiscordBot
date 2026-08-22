@@ -9,6 +9,9 @@
   "log_batch_size": 25,
   "send_buffered_logs_on_start": false,
   "link_role_sync_seconds": 60,
+  "owner_dm_user_ids": [123456789012345678],
+  "health_check_interval_seconds": 60,
+  "health_alert_failures_threshold": 3,
   "assignable_groups": [
     { "name": "moderator", "display_name": "Модератор" },
     { "name": "admin", "display_name": "Администратор" },
@@ -75,3 +78,4 @@
     }
   ]
 }
+

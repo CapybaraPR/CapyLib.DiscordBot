@@ -135,14 +135,14 @@ internal sealed class CommandRequest
     [JsonPropertyName("command")]
     public string Command { get; set; } = string.Empty;
 
-    [JsonPropertyName("access_level")]
-    public string AccessLevel { get; set; } = string.Empty;
+    [JsonPropertyName("access")]
+    public string Access { get; set; } = string.Empty;
 
-    [JsonPropertyName("discord_user_id")]
-    public string DiscordUserId { get; set; } = string.Empty;
+    [JsonPropertyName("actor_id")]
+    public ulong ActorId { get; set; }
 
-    [JsonPropertyName("discord_user_name")]
-    public string DiscordUserName { get; set; } = string.Empty;
+    [JsonPropertyName("actor_name")]
+    public string ActorName { get; set; } = string.Empty;
 }
 
 internal sealed class CommandResponse

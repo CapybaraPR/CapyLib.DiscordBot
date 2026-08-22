@@ -408,9 +408,9 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             var request = new CommandRequest
             {
                 Command = command,
-                AccessLevel = access.ApiName(),
-                DiscordUserId = context.User.Id.ToString(),
-                DiscordUserName = context.User.Username
+                Access = access.ApiName(),
+                ActorId = context.User.Id,
+                ActorName = context.User.Username
             };
             CommandResponse response = await server.Api.ExecuteCommandAsync(request, CancellationToken.None)
                 .ConfigureAwait(false);
@@ -433,6 +433,14 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
 
             await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed)).ConfigureAwait(false);
             await SendAuditAsync(context, server.Config, response.Command, access, response.Success, output)
+                .ConfigureAwait(false);
+        }
+        catch (BridgeApiException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            string hint = "Команда отклонена сервером (белый список или блоклист). " +
+                          "Для команд уровня «Ключ Создателя» включите allow_creator_access=true в конфиге CapyLib на игровом сервере.";
+            await RespondErrorAsync(context, server.Config, new BridgeApiException(ex.StatusCode, hint)).ConfigureAwait(false);
+            await SendAuditAsync(context, server.Config, command, access, false, hint)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -525,7 +533,9 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
         int shown = 0;
         foreach (ApiPlayer player in response.Players)
         {
-            string name = showNames ? DiscordPresentation.Limit(player.DisplayName, 60) : "имя скрыто";
+            string name = showNames
+                ? "`" + DiscordPresentation.Limit(player.DisplayName.Replace("`", "'"), 60) + "`"
+                : "имя скрыто";
             string line = $"`#{player.Id}` {name} — `{player.Role}`\n";
             if (builder.Length + line.Length > 3800)
                 break;

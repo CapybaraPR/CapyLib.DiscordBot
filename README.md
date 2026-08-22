@@ -12,7 +12,7 @@
                 ██████╔╝██║███████║╚██████╗╚██████╔╝██║  ██║██████╔╝╚██████╔╝   ██║   
                 ╚═════╝ ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═════╝  ╚═════╝    ╚═╝   
 
-               [ CapyLib Multi-Server Discord Bot v1.2.0 for SCP:SL ]
+               [ CapyLib Multi-Server Discord Bot v1.3.1 for SCP:SL ]
 ===============================================================================
 ```
 
@@ -43,7 +43,11 @@
 
 ### 1. Требования
 * [.NET 8.0 SDK / Runtime](https://dotnet.microsoft.com/download) или новее.
-* Игровой сервер SCP:SL с установленной библиотекой [**CapyLib**](https://github.com/CapybaraPR/CapyLib) (`Capy.API.DiscordBridge`).
+* Игровой сервер SCP:SL с установленной библиотекой [**CapyLib**](https://github.com/CapybaraPR/CapyLib) **v1.3.1+** (`Capy.API.DiscordBridge`).
+
+> ⚠️ **Начиная с CapyLib 1.3.1** команды уровня «Ключ Создателя» (например, `setgroup` вне белого списка) по умолчанию отклоняются сервером.
+> Чтобы они работали, включите в YAML-конфиге CapyLib на игровом сервере опцию `allow_creator_access: true`.
+> Без неё бот будет получать `403 Forbidden` для команд, не входящих в `RaAllowedCommands`.
 
 ### 2. Генерация пары SSH-ключей
 Сгенерируйте пару ключей встроенной командой:

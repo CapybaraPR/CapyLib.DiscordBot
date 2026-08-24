@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -63,6 +63,18 @@ internal sealed class BridgeApiClient : IDisposable
         StaffRemoveRequest request,
         CancellationToken cancellationToken) =>
         PostAsync<StaffRemoveRequest, CommandResponse>("v1/staff/remove", request, cancellationToken);
+
+    public Task<XpResponse> GetXpAsync(string userId, CancellationToken cancellationToken)
+    {
+        string path = $"v1/xp?user_id={Uri.EscapeDataString(userId)}";
+        return GetAsync<XpResponse>(path, cancellationToken);
+    }
+
+    public Task<XpLeaderboardResponse> GetXpLeaderboardAsync(int count, CancellationToken cancellationToken)
+    {
+        string path = $"v1/xp/leaderboard?count={count.ToString(CultureInfo.InvariantCulture)}";
+        return GetAsync<XpLeaderboardResponse>(path, cancellationToken);
+    }
 
     public Task<LogEventBatchResponse> GetLogsAsync(long afterId, int limit, CancellationToken cancellationToken)
     {

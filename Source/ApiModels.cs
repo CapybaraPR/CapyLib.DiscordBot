@@ -1,4 +1,4 @@
-namespace AspectDiscordBot;
+﻿namespace AspectDiscordBot;
 
 internal sealed class HealthResponse
 {
@@ -264,6 +264,9 @@ internal sealed class LinkedAccountsResponse
 
 internal sealed class LinkedDiscordAccount
 {
+    [JsonPropertyName("game_user_id")]
+    public string GameUserId { get; set; } = string.Empty;
+
     [JsonPropertyName("discord_user_id")]
     public ulong DiscordUserId { get; set; }
 
@@ -446,4 +449,52 @@ internal sealed class StaffRemoveRequest
 
     [JsonPropertyName("reason")]
     public string Reason { get; set; } = string.Empty;
+}
+
+internal sealed class XpLeaderboardEntryDto
+{
+    [JsonPropertyName("user_id")]
+    public string UserId { get; set; } = string.Empty;
+
+    [JsonPropertyName("nickname")]
+    public string Nickname { get; set; } = string.Empty;
+
+    [JsonPropertyName("xp")]
+    public double Xp { get; set; }
+
+    [JsonPropertyName("level_text")]
+    public string LevelText { get; set; } = string.Empty;
+
+    [JsonPropertyName("level_color")]
+    public string LevelColor { get; set; } = string.Empty;
+}
+
+internal sealed class XpResponse
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+
+    [JsonPropertyName("found")]
+    public bool Found { get; set; }
+
+    [JsonPropertyName("user_id")]
+    public string UserId { get; set; } = string.Empty;
+
+    [JsonPropertyName("xp")]
+    public double Xp { get; set; }
+
+    [JsonPropertyName("level_text")]
+    public string LevelText { get; set; } = string.Empty;
+
+    [JsonPropertyName("level_color")]
+    public string LevelColor { get; set; } = string.Empty;
+}
+
+internal sealed class XpLeaderboardResponse
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+
+    [JsonPropertyName("entries")]
+    public List<XpLeaderboardEntryDto> Entries { get; set; } = new();
 }

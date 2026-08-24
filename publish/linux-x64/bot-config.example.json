@@ -1,0 +1,81 @@
+{
+  "bot_token": "ВАШ_DISCORD_BOT_TOKEN",
+  "guild_id": 123456789012345678,
+  "status_refresh_seconds": 30,
+  "presence_rotate_seconds": 10,
+  "ephemeral_command_responses": true,
+  "show_player_names": true,
+  "log_poll_seconds": 2,
+  "log_batch_size": 25,
+  "send_buffered_logs_on_start": false,
+  "link_role_sync_seconds": 60,
+  "owner_dm_user_ids": [123456789012345678],
+  "health_check_interval_seconds": 60,
+  "health_alert_failures_threshold": 3,
+  "assignable_groups": [
+    { "name": "moderator", "display_name": "Модератор" },
+    { "name": "admin", "display_name": "Администратор" },
+    { "name": "senioradmin", "display_name": "Старший Администратор" }
+  ],
+  "servers": [
+    {
+      "id": "nr",
+      "display_name": "NR",
+      "api_base_url": "http://127.0.0.1:8123/",
+      "key_id": "aspect-bot",
+      "ssh_private_key_path": "aspect_bridge.key",
+      "api_key": "OPTIONAL_FALLBACK_API_KEY_32_CHARS_MIN",
+      "public_address": "nr.yourserver.ru:7777",
+      "status_channel_id": 123456789012345678,
+      "status_message_id": 0,
+      "audit_channel_id": 0,
+      "required_server_role_ids": [
+        100000000000000001
+      ],
+      "ra_role_ids": [
+        200000000000000001,
+        200000000000000002
+      ],
+      "creator_key_role_ids": [
+        200000000000000003
+      ],
+      "log_channels": {
+        "punishments": [{ "id": 300000000000000001, "mode": "embed" }],
+        "rounds": [{ "id": 300000000000000002, "mode": "embed" }],
+        "server": [{ "id": 300000000000000003, "mode": "embed" }],
+        "commands": [{ "id": 300000000000000004, "mode": "embed" }],
+        "reports": [{ "id": 300000000000000005, "mode": "embed" }]
+      }
+    },
+    {
+      "id": "mrp",
+      "display_name": "MRP",
+      "api_base_url": "http://127.0.0.1:8124/",
+      "key_id": "aspect-bot",
+      "ssh_private_key_path": "aspect_bridge.key",
+      "api_key": "OPTIONAL_FALLBACK_API_KEY_32_CHARS_MIN",
+      "public_address": "mrp.yourserver.ru:7778",
+      "status_channel_id": 123456789012345678,
+      "status_message_id": 0,
+      "audit_channel_id": 0,
+      "required_server_role_ids": [
+        100000000000000002
+      ],
+      "ra_role_ids": [
+        200000000000000001,
+        200000000000000002
+      ],
+      "creator_key_role_ids": [
+        200000000000000003
+      ],
+      "log_channels": {
+        "punishments": [{ "id": 300000000000000011, "mode": "embed" }],
+        "rounds": [{ "id": 300000000000000012, "mode": "embed" }],
+        "server": [{ "id": 300000000000000013, "mode": "embed" }],
+        "commands": [{ "id": 300000000000000014, "mode": "embed" }],
+        "reports": [{ "id": 300000000000000015, "mode": "embed" }]
+      }
+    }
+  ]
+}
+

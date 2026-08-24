@@ -1,4 +1,4 @@
-namespace AspectDiscordBot;
+﻿namespace AspectDiscordBot;
 
 internal sealed class BotSlashCommands : ApplicationCommandModule
 {
@@ -467,6 +467,147 @@ internal sealed class BotSlashCommands : ApplicationCommandModule
             .WithFooter("Капибара SCP:SL")
             .WithTimestamp(DateTimeOffset.UtcNow)
             .Build();
+    }
+
+    [SlashCommand("level", "Показать ваш XP и титул капибары (или указанного игрока).")]
+    public async Task LevelAsync(
+        InteractionContext context,
+        [Option("server", "Выберите NR или MRP.")]
+        [Choice("NR", "nr")]
+        [Choice("MRP", "mrp")] string serverId,
+        [Option("user", "Игрок Discord (по умолчанию — вы).")] DiscordUser? user = null)
+    {
+        BotRuntime runtime = BotRuntime.Current;
+        await DeferAsync(context, runtime.Config.EphemeralCommandResponses).ConfigureAwait(false);
+        ServerRuntime? server = await ResolveServerAsync(context, serverId).ConfigureAwait(false);
+        if (server == null)
+            return;
+
+        DiscordUser targetUser = user ?? context.User;
+
+        try
+        {
+            LinkedAccountsResponse links = await server.Api.GetLinkedAccountsAsync(CancellationToken.None).ConfigureAwait(false);
+            LinkedDiscordAccount? link = links.Accounts.FirstOrDefault(a => a.DiscordUserId == targetUser.Id);
+
+            if (link == null || string.IsNullOrEmpty(link.GameUserId))
+            {
+                bool isSelf = user == null || user.Id == context.User.Id;
+                string hint = isSelf
+                    ? "Ваш аккаунт не привязан. На сервере пропишите `.discord` или `/linksteam`, чтобы привязать Steam."
+                    : $"У игрока {targetUser.Mention} нет привязанного Steam-аккаунта.";
+                await context.EditResponseAsync(new DiscordWebhookBuilder().WithContent(hint)).ConfigureAwait(false);
+                return;
+            }
+
+            XpResponse xp = await server.Api.GetXpAsync(link.GameUserId, CancellationToken.None).ConfigureAwait(false);
+
+            if (!xp.Found)
+            {
+                await context.EditResponseAsync(
+                        new DiscordWebhookBuilder().WithContent($"Для `{targetUser.Username}` пока нет данных об опыте — сыграйте раунд на сервере!"))
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            string colorHex = string.IsNullOrEmpty(xp.LevelColor) ? "#ffd285" : xp.LevelColor;
+            var embed = new DiscordEmbedBuilder()
+                .WithTitle($"🟠 Уровень капибары • {server.Config.DisplayName}")
+                .WithDescription($"**{targetUser.Mention}**")
+                .AddField("Титул", $"```{xp.LevelText}```", true)
+                .AddField("Опыт", $"`{xp.Xp:F1}`", true)
+                .WithColor(HexToColor(colorHex))
+                .WithFooter("Капибара SCP:SL • Опыт синхронизируется с игрой")
+                .WithTimestamp(DateTimeOffset.UtcNow)
+                .Build();
+
+            await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed)).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await RespondErrorAsync(context, server.Config, ex).ConfigureAwait(false);
+        }
+    }
+
+    [SlashCommand("top", "Топ игроков по опыту на выбранном сервере.")]
+    public async Task TopAsync(
+        InteractionContext context,
+        [Option("server", "Выберите NR или MRP.")]
+        [Choice("NR", "nr")]
+        [Choice("MRP", "mrp")] string serverId,
+        [Option("count", "Сколько мест показать (1-25, по умолчанию 10).")] long count = 10)
+    {
+        BotRuntime runtime = BotRuntime.Current;
+        await DeferAsync(context, runtime.Config.EphemeralCommandResponses).ConfigureAwait(false);
+        ServerRuntime? server = await ResolveServerAsync(context, serverId).ConfigureAwait(false);
+        if (server == null)
+            return;
+
+        int limit = (int)Math.Clamp(count, 1, 25);
+
+        try
+        {
+            XpLeaderboardResponse response = await server.Api.GetXpLeaderboardAsync(limit, CancellationToken.None).ConfigureAwait(false);
+
+            if (response.Entries.Count == 0)
+            {
+                await context.EditResponseAsync(
+                        new DiscordWebhookBuilder().WithContent("Лидерборд пуст — никто ещё не заработал опыт."))
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            string[] medals = { "🥇", "🥈", "🥉" };
+            var sb = new StringBuilder();
+            for (int i = 0; i < response.Entries.Count; i++)
+            {
+                XpLeaderboardEntryDto e = response.Entries[i];
+                string medal = i < medals.Length ? medals[i] : $"`#{i + 1}`";
+                string name = string.IsNullOrEmpty(e.Nickname) ? $"`{DiscordPresentation.Limit(e.UserId, 18)}`" : DiscordPresentation.Limit(e.Nickname, 40);
+                string line = $"{medal} **{name}** — {e.LevelText} (`{e.Xp:F0}` XP)\n";
+                if (sb.Length + line.Length > 3800)
+                {
+                    sb.Append($"\n...и ещё {response.Entries.Count - i} игрок(ов).");
+                    break;
+                }
+
+                sb.Append(line);
+            }
+
+            var embed = new DiscordEmbedBuilder()
+                .WithTitle($"🏆 Топ капибар • {server.Config.DisplayName}")
+                .WithDescription(sb.ToString())
+                .WithColor(new DiscordColor(255, 165, 0))
+                .WithFooter("Капибара SCP:SL • Опыт синхронизируется с игрой")
+                .WithTimestamp(DateTimeOffset.UtcNow)
+                .Build();
+
+            await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed)).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await RespondErrorAsync(context, server.Config, ex).ConfigureAwait(false);
+        }
+    }
+
+    private static DiscordColor HexToColor(string hex)
+    {
+        try
+        {
+            hex = hex.TrimStart('#');
+            if (hex.Length == 6)
+            {
+                byte r = Convert.ToByte(hex.Substring(0, 2), 16);
+                byte g = Convert.ToByte(hex.Substring(2, 2), 16);
+                byte b = Convert.ToByte(hex.Substring(4, 2), 16);
+                return new DiscordColor(r, g, b);
+            }
+        }
+        catch
+        {
+        }
+
+        return new DiscordColor(255, 210, 133);
     }
 
     private static async Task<ServerRuntime?> ResolveServerAsync(InteractionContext context, string serverId)

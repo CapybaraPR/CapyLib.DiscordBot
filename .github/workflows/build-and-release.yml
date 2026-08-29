@@ -49,6 +49,7 @@ jobs:
             CapyLib.DiscordBot-linux-x64.zip
             CapyLib.DiscordBot-win-x64.zip
             CapyLib.DiscordBot-net8.0.zip
+          retention-days: 1
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
